@@ -5,6 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
+- Hero do Dashboard refinado ao padrão da referência: container arredondado
+  com margens, plano exibido direto sobre o fundo da marca (sem card
+  interno), círculos decorativos vazando no canto superior direito, pill de
+  status tom-sobre-tom (`BrandDeep` novo token público) + pill branca
+  "Trocar Contrato"; cards de ação rápida com borda sutil e ícone direto.
 - Redesenho do Dashboard inspirado na referência do provedor: hero colorido
   com "Olá, {nome}." + "Sair", card "Meu plano" (plano, vencimento, pill de
   status online/offline via `rede/status`, "Trocar Contrato" quando há

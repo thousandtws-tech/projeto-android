@@ -1,13 +1,18 @@
 package com.sgp.cliente.feature.dashboard
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
@@ -38,6 +44,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,10 +64,12 @@ import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonDashboard
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
-import com.sgp.cliente.core.designsystem.components.SgpTextButton
+import com.sgp.cliente.core.designsystem.theme.BrandDeep
 import com.sgp.cliente.core.designsystem.theme.LayoutTokens
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
+import com.sgp.cliente.core.designsystem.theme.StatusPaid
+import com.sgp.cliente.core.designsystem.theme.StatusPaidContainer
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
@@ -251,97 +261,152 @@ private fun LazyGridScope.dashboardItems(
     }
 }
 
-/** Colored hero: greeting + plan card + status/contract pills — mirrors the
- * reference's full-tint header block. */
+/** Rounded brand container (margins + big radius): greeting, plan info
+ * directly on the tint and status/contract pills — mirrors the reference. */
 @Composable
 private fun HeroCard(
     uiState: DashboardUiState,
     onOpenContracts: () -> Unit,
     onLogout: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(28.dp)
     Surface(
         color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(28.dp),
-        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        modifier = Modifier.fillMaxWidth().clip(shape),
     ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Olá, ${uiState.session?.firstName ?: "cliente"}.",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onLogout) {
-                    Text("Sair", color = MaterialTheme.colorScheme.onPrimary)
+        Box {
+            HeroDecorations()
+            Column(modifier = Modifier.padding(Spacing.lg)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Olá, ${uiState.session?.firstName ?: "cliente"}.",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onLogout) {
+                        Text("Sair", color = MaterialTheme.colorScheme.onPrimary)
+                    }
                 }
-            }
 
-            uiState.contract?.let { contract ->
-                PlanCard(
-                    contract = contract,
-                    serviceStatus = uiState.serviceStatus,
-                    showSwitch = uiState.hasMultipleContracts,
-                    onOpenContracts = onOpenContracts,
-                )
+                uiState.contract?.let { contract ->
+                    PlanBlock(
+                        contract = contract,
+                        serviceStatus = uiState.serviceStatus,
+                        showSwitch = uiState.hasMultipleContracts,
+                        onOpenContracts = onOpenContracts,
+                    )
+                }
             }
         }
     }
 }
 
-/** White "Meu plano" card inside the colored hero. */
+/** Light circles bleeding off the top-right corner — decorative, like the
+ * reference's ring shapes. Surface's clip keeps them inside the radius. */
 @Composable
-private fun PlanCard(
+private fun BoxScope.HeroDecorations() {
+    val tint = MaterialTheme.colorScheme.onPrimary
+    Box(
+        Modifier
+            .size(180.dp)
+            .align(Alignment.TopEnd)
+            .offset(x = 70.dp, y = (-64).dp)
+            .background(tint.copy(alpha = 0.08f), CircleShape),
+    )
+    Box(
+        Modifier
+            .size(120.dp)
+            .align(Alignment.TopEnd)
+            .offset(x = 58.dp, y = 96.dp)
+            .border(16.dp, tint.copy(alpha = 0.10f), CircleShape),
+    )
+}
+
+/** Plan block directly on the hero tint — no inner card, like the reference. */
+@Composable
+private fun PlanBlock(
     contract: Contract,
     serviceStatus: ServiceStatus?,
     showSwitch: Boolean,
     onOpenContracts: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Text(
-                text = "Meu plano",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = contract.internetPlan ?: "Contrato ${contract.id}",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Vencimento dia ${contract.dueDay}" +
-                    (contract.internetPlanValue?.let { " • ${MoneyFormatter.brl(it)}/mês" } ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                serviceStatus?.let { status ->
-                    SgpStatusBadge(
-                        text = if (status.isOnline) "Você está online" else "Você está offline",
-                        kind = if (status.isOnline) SgpBadgeKind.PAID else SgpBadgeKind.OVERDUE,
-                    )
-                } ?: SgpStatusBadge(
-                    text = contract.status,
-                    kind = if (contract.isActive) SgpBadgeKind.PAID else SgpBadgeKind.NEUTRAL,
-                )
-                if (showSwitch) {
-                    Spacer(Modifier.weight(1f))
-                    SgpTextButton(text = "Trocar Contrato", onClick = onOpenContracts)
-                }
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    Column(modifier = Modifier.padding(top = Spacing.md)) {
+        Text(
+            text = "Meu plano",
+            style = MaterialTheme.typography.labelMedium,
+            color = onPrimary.copy(alpha = 0.75f),
+        )
+        Text(
+            text = contract.internetPlan ?: "Contrato ${contract.id}",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = onPrimary,
+        )
+        Text(
+            text = "Vencimento dia ${contract.dueDay}" +
+                (contract.internetPlanValue?.let { " • ${MoneyFormatter.brl(it)}/mês" } ?: ""),
+            style = MaterialTheme.typography.bodySmall,
+            color = onPrimary.copy(alpha = 0.85f),
+        )
+        Row(
+            modifier = Modifier.padding(top = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StatusPill(serviceStatus, contract)
+            if (showSwitch) {
+                SwitchContractPill(onOpenContracts)
             }
         }
+    }
+}
+
+/** Tone-on-tone pill on the hero: deep brand when offline, mint when online. */
+@Composable
+private fun StatusPill(serviceStatus: ServiceStatus?, contract: Contract) {
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    val (label, container, content) = when {
+        serviceStatus != null && serviceStatus.isOnline ->
+            Triple("Você está online", StatusPaidContainer, StatusPaid)
+        serviceStatus != null ->
+            Triple("Você está offline", BrandDeep, Color.White)
+        else -> Triple(
+            contract.status,
+            onPrimary.copy(alpha = 0.18f),
+            onPrimary,
+        )
+    }
+    Surface(color = container, shape = CircleShape) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = content,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
+/** White pill button on the hero — the reference's "Trocar Contrato". */
+@Composable
+private fun SwitchContractPill(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface,
+        shape = CircleShape,
+    ) {
+        Text(
+            text = "Trocar Contrato",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
     }
 }
 
@@ -355,7 +420,7 @@ private fun QuickActionsRow(
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
         Text(
-            text = "Sobre sua conta",
+            text = "Sobre minha conta",
             style = MaterialTheme.typography.titleSmall,
         )
         Row(
@@ -399,6 +464,7 @@ private fun QuickActionCard(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
         shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier,
     ) {
         Column(
@@ -406,17 +472,12 @@ private fun QuickActionCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(Spacing.xs).size(22.dp),
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,

@@ -25,6 +25,9 @@ internal val Error40 = Color(0xFFBA1A1A)
 internal val Error80 = Color(0xFFFFB4AB)
 internal val Error90 = Color(0xFFFFDAD6)
 
+// Deep brand tone — status pills/accents over the primary hero (fixed pair with white).
+val BrandDeep = Brand30
+
 // Semantic invoice status colors.
 val StatusPaid = Color(0xFF1E7F4F)
 val StatusPaidContainer = Color(0xFFBDEDD2)
