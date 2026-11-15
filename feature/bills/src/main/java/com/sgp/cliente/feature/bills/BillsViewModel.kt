@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 private const val PAGE_SIZE = 25
 
@@ -38,7 +39,27 @@ data class BillsUiState(
             }
             .sortedByDescending { (_, list) -> list.firstOrNull()?.dueDate }
     }
+
+    /** Open-invoice snapshot for the summary card: count, real subtotal and
+     * the nearest effective due date (upcoming first, overdue otherwise). */
+    fun openSummary(today: LocalDate): OpenSummary {
+        val open = invoices.filter { it.status == InvoiceStatus.OPEN }
+        val dues = open.mapNotNull { it.effectiveOrOriginalDueDate }
+        val nextDue = dues.filter { !it.isBefore(today) }.minOrNull()
+            ?: dues.maxOrNull()
+        return OpenSummary(
+            count = open.size,
+            total = open.sumOf { it.displayAmount ?: 0.0 },
+            nextDue = nextDue,
+        )
+    }
 }
+
+data class OpenSummary(
+    val count: Int,
+    val total: Double,
+    val nextDue: LocalDate?,
+)
 
 @HiltViewModel
 class BillsViewModel @Inject constructor(

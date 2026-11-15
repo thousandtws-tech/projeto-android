@@ -36,11 +36,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,11 +60,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -100,6 +109,12 @@ fun BillsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
+    val clipboard = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
+    val onCopyValue: (String) -> Unit = { clipboard.setText(AnnotatedString(it)) }
+    val onOpenBoleto: (Invoice) -> Unit = { invoice ->
+        invoice.boletoPath?.let { runCatching { uriHandler.openUri(it) } }
+    }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -144,7 +159,14 @@ fun BillsScreen(
                                 message = "Não há faturas para o filtro selecionado.",
                                 modifier = Modifier.fillMaxSize(),
                             )
-                        else -> InvoiceList(uiState, listState, gridState, onOpenInvoice)
+                        else -> InvoiceList(
+                            uiState,
+                            listState,
+                            gridState,
+                            onOpenInvoice,
+                            onCopyValue,
+                            onOpenBoleto,
+                        )
                     }
                 }
             }
@@ -255,6 +277,8 @@ private fun InvoiceList(
     listState: LazyListState,
     gridState: LazyGridState,
     onOpenInvoice: (Int) -> Unit,
+    onCopyValue: (String) -> Unit,
+    onOpenBoleto: (Invoice) -> Unit,
 ) {
     val today = remember { LocalDate.now() }
     if (currentWindowWidthSizeClass() == WindowWidthSizeClass.Compact) {
@@ -264,7 +288,7 @@ private fun InvoiceList(
             contentPadding = PaddingValues(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            billItems(uiState, today, onOpenInvoice)
+            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto)
         }
     } else {
         LazyVerticalGrid(
@@ -275,16 +299,28 @@ private fun InvoiceList(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            billItems(uiState, today, onOpenInvoice)
+            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto)
         }
     }
 }
+
+/** Summary is only meaningful alongside unpaid invoices — hidden under the
+ * Pagas/Canceladas filters, same rule as the attention card. */
+private fun BillsUiState.showOpenSummary(today: LocalDate): Boolean =
+    (filter == null || filter == InvoiceStatus.OPEN) && openSummary(today).count > 0
 
 private fun LazyListScope.billItems(
     uiState: BillsUiState,
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
+    onCopyValue: (String) -> Unit,
+    onOpenBoleto: (Invoice) -> Unit,
 ) {
+    if (uiState.showOpenSummary(today)) {
+        item(key = "open_summary") {
+            OpenSummaryCard(uiState.openSummary(today))
+        }
+    }
     uiState.attentionInvoice(today)?.let { overdue ->
         item(key = "overdue_hero") {
             OverdueInvoiceCard(overdue, today) { onOpenInvoice(overdue.id) }
@@ -295,10 +331,12 @@ private fun LazyListScope.billItems(
             CompetenceHeader(competence, invoices)
         }
         items(invoices, key = { it.id }) { invoice ->
-            InvoiceRow(
+            InvoiceCard(
                 invoice = invoice,
                 today = today,
-                onClick = { onOpenInvoice(invoice.id) },
+                onOpenInvoice = { onOpenInvoice(invoice.id) },
+                onCopyValue = onCopyValue,
+                onOpenBoleto = onOpenBoleto,
             )
         }
     }
@@ -317,7 +355,14 @@ private fun LazyGridScope.billItems(
     uiState: BillsUiState,
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
+    onCopyValue: (String) -> Unit,
+    onOpenBoleto: (Invoice) -> Unit,
 ) {
+    if (uiState.showOpenSummary(today)) {
+        item(key = "open_summary", span = { GridItemSpan(maxLineSpan) }) {
+            OpenSummaryCard(uiState.openSummary(today))
+        }
+    }
     uiState.attentionInvoice(today)?.let { overdue ->
         item(key = "overdue_hero", span = { GridItemSpan(maxLineSpan) }) {
             OverdueInvoiceCard(overdue, today) { onOpenInvoice(overdue.id) }
@@ -328,10 +373,12 @@ private fun LazyGridScope.billItems(
             CompetenceHeader(competence, invoices)
         }
         items(invoices, key = { it.id }) { invoice ->
-            InvoiceRow(
+            InvoiceCard(
                 invoice = invoice,
                 today = today,
-                onClick = { onOpenInvoice(invoice.id) },
+                onOpenInvoice = { onOpenInvoice(invoice.id) },
+                onCopyValue = onCopyValue,
+                onOpenBoleto = onOpenBoleto,
             )
         }
     }
@@ -429,67 +476,220 @@ private fun CompetenceHeader(competence: String, invoices: List<Invoice>) {
     }
 }
 
+/** Glanceable open-debt summary — count, subtotal and nearest due date. */
 @Composable
-private fun InvoiceRow(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
-    val overdue = invoice.isOverdue(today)
-    SgpCard(onClick = onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(Spacing.xs).size(20.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = MoneyFormatter.brl(invoice.displayAmount),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = invoice.subline(today),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            SgpStatusBadge(
-                text = when {
-                    overdue -> "Vencida"
-                    invoice.status == InvoiceStatus.PAID -> "Paga"
-                    invoice.status == InvoiceStatus.CANCELLED -> "Cancelada"
-                    else -> "Em aberto"
-                },
-                kind = when {
-                    overdue -> SgpBadgeKind.OVERDUE
-                    invoice.status == InvoiceStatus.PAID -> SgpBadgeKind.PAID
-                    invoice.status == InvoiceStatus.CANCELLED -> SgpBadgeKind.NEUTRAL
-                    else -> SgpBadgeKind.OPEN
-                },
+private fun OpenSummaryCard(summary: OpenSummary) {
+    SgpCard {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            SummaryMetric(
+                label = "Faturas em aberto",
+                value = summary.count.toString(),
+                modifier = Modifier.weight(1f),
             )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+            SummaryMetric(
+                label = "Valor em aberto",
+                value = MoneyFormatter.brl(summary.total),
+                modifier = Modifier.weight(1f),
+            )
+            SummaryMetric(
+                label = "Próx. vencimento",
+                value = summary.nextDue?.let(DateFormatter::display) ?: "—",
+                modifier = Modifier.weight(1f),
             )
         }
     }
 }
 
-/** Context line: paid date for paid bills, due countdown for open ones,
- * plain due date for cancelled (relative days would be misleading). */
-private fun Invoice.subline(today: LocalDate): String = when (status) {
-    InvoiceStatus.PAID -> "Paga em ${DateFormatter.display(paidAt ?: effectiveOrOriginalDueDate)}"
-    InvoiceStatus.CANCELLED -> "Vencimento ${DateFormatter.display(effectiveOrOriginalDueDate)}"
-    else -> DateFormatter.dueWithRelative(effectiveOrOriginalDueDate, today)
+@Composable
+private fun SummaryMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+/** Full invoice card in the reference style: status badge + "Ver fatura",
+ * due/amount/document info, and inline payment actions for open invoices
+ * (copy barcode, copy PIX, open boleto) so paying needs no extra screens. */
+@Composable
+private fun InvoiceCard(
+    invoice: Invoice,
+    today: LocalDate,
+    onOpenInvoice: () -> Unit,
+    onCopyValue: (String) -> Unit,
+    onOpenBoleto: (Invoice) -> Unit,
+) {
+    val overdue = invoice.isOverdue(today)
+    val payable = invoice.status == InvoiceStatus.OPEN
+    val containerColor = if (overdue) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = if (overdue) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    Surface(
+        onClick = onOpenInvoice,
+        color = containerColor,
+        contentColor = contentColor,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SgpStatusBadge(
+                    text = when {
+                        overdue -> "Vencida · Prioridade"
+                        invoice.status == InvoiceStatus.PAID -> "Paga"
+                        invoice.status == InvoiceStatus.CANCELLED -> "Cancelada"
+                        else -> "Em aberto"
+                    },
+                    kind = when {
+                        overdue -> SgpBadgeKind.OVERDUE
+                        invoice.status == InvoiceStatus.PAID -> SgpBadgeKind.PAID
+                        invoice.status == InvoiceStatus.CANCELLED -> SgpBadgeKind.NEUTRAL
+                        else -> SgpBadgeKind.OPEN
+                    },
+                )
+                Spacer(Modifier.weight(1f))
+                OutlinedButton(
+                    onClick = onOpenInvoice,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                ) {
+                    Text("Ver fatura", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                InvoiceInfo(
+                    label = "Vencimento",
+                    value = DateFormatter.display(invoice.effectiveOrOriginalDueDate),
+                    modifier = Modifier.weight(1f),
+                )
+                InvoiceInfo(
+                    label = "Valor",
+                    value = MoneyFormatter.brl(invoice.displayAmount),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            invoice.documentNumber?.let { doc ->
+                InvoiceInfo(label = "Nº da fatura", value = doc.toString())
+            }
+
+            if (payable) {
+                HorizontalDivider(color = contentColor.copy(alpha = 0.12f))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    PaymentAction(
+                        icon = Icons.Outlined.ContentCopy,
+                        title = "Copiar código",
+                        caption = "Linha digitável",
+                        value = invoice.barcode,
+                        modifier = Modifier.weight(1f),
+                    ) { onCopyValue(it) }
+                    PaymentAction(
+                        icon = Icons.Filled.QrCode2,
+                        title = "Copiar PIX",
+                        caption = "Pague agora",
+                        value = invoice.pixCode,
+                        modifier = Modifier.weight(1f),
+                    ) { onCopyValue(it) }
+                    PaymentAction(
+                        icon = Icons.Outlined.PictureAsPdf,
+                        title = "Abrir boleto",
+                        caption = "Visualizar PDF",
+                        value = invoice.boletoPath,
+                        modifier = Modifier.weight(1f),
+                    ) { onOpenBoleto(invoice) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InvoiceInfo(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalContentColor.current.copy(alpha = 0.72f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+/** Copy/open quick action — disabled look when the API carries no value
+ * for it on this invoice (nothing to copy or open). */
+@Composable
+private fun PaymentAction(
+    icon: ImageVector,
+    title: String,
+    caption: String,
+    value: String?,
+    modifier: Modifier = Modifier,
+    onAction: (String) -> Unit,
+) {
+    val enabled = value != null
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled) { value?.let(onAction) }
+            .alpha(if (enabled) 1f else 0.38f)
+            .padding(vertical = Spacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            shape = CircleShape,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(Spacing.xs).size(20.dp),
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = Spacing.xxs),
+        )
+        Text(
+            text = caption,
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalContentColor.current.copy(alpha = 0.72f),
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable
@@ -507,6 +707,7 @@ private fun previewInvoice(
     id: Int,
     status: InvoiceStatus,
     dueDate: LocalDate,
+    withPayment: Boolean = false,
 ) = Invoice(
     id = id,
     documentNumber = 100000L + id,
@@ -517,17 +718,17 @@ private fun previewInvoice(
     amount = 99.90 + id,
     correctedAmount = null,
     paidAt = if (status == InvoiceStatus.PAID) dueDate else null,
-    barcode = null,
-    pixCode = null,
+    barcode = if (withPayment) "23793.38128 60007.827136 95000.063305 1 99100000123456" else null,
+    pixCode = if (withPayment) "00020126-pix-copia-e-cola" else null,
     canGeneratePix = false,
-    boletoPath = null,
+    boletoPath = if (withPayment) "https://demo.sgp.net.br/boleto/$id" else null,
 )
 
 private val previewUiState = BillsUiState(
     loading = false,
     invoices = listOf(
-        previewInvoice(1, InvoiceStatus.OPEN, LocalDate.now().plusDays(5)),
-        previewInvoice(2, InvoiceStatus.OPEN, LocalDate.now().minusDays(2)),
+        previewInvoice(1, InvoiceStatus.OPEN, LocalDate.now().plusDays(5), withPayment = true),
+        previewInvoice(2, InvoiceStatus.OPEN, LocalDate.now().minusDays(2), withPayment = true),
         previewInvoice(3, InvoiceStatus.PAID, LocalDate.now().minusMonths(1)),
         previewInvoice(4, InvoiceStatus.CANCELLED, LocalDate.now().minusMonths(1).minusDays(3)),
     ),
@@ -542,6 +743,8 @@ private fun InvoiceListCompactPreview() {
             listState = rememberLazyListState(),
             gridState = rememberLazyGridState(),
             onOpenInvoice = {},
+            onCopyValue = {},
+            onOpenBoleto = {},
         )
     }
 }
@@ -555,6 +758,8 @@ private fun InvoiceListGridPreview() {
             listState = rememberLazyListState(),
             gridState = rememberLazyGridState(),
             onOpenInvoice = {},
+            onCopyValue = {},
+            onOpenBoleto = {},
         )
     }
 }

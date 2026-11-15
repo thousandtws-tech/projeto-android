@@ -100,4 +100,64 @@ class BillsUiStateTest {
             state.grouped.map { it.first }.distinct().size,
         )
     }
+
+    @Test
+    fun `openSummary counts only open invoices and totals their amounts`() {
+        val state = BillsUiState(
+            invoices = listOf(
+                invoice(1, LocalDate.of(2026, 5, 10)),
+                invoice(2, LocalDate.of(2026, 6, 10)),
+                invoice(3, LocalDate.of(2026, 4, 10)).copy(statusId = 2),
+            ),
+        )
+
+        val summary = state.openSummary(LocalDate.of(2026, 5, 1))
+
+        assertEquals(2, summary.count)
+        assertEquals(200.0, summary.total, 0.001)
+    }
+
+    @Test
+    fun `openSummary picks the earliest upcoming due date`() {
+        val state = BillsUiState(
+            invoices = listOf(
+                invoice(1, LocalDate.of(2026, 6, 10)),
+                invoice(2, LocalDate.of(2026, 5, 20)),
+                invoice(3, LocalDate.of(2026, 5, 15)),
+            ),
+        )
+
+        val summary = state.openSummary(LocalDate.of(2026, 5, 1))
+
+        assertEquals(LocalDate.of(2026, 5, 15), summary.nextDue)
+    }
+
+    @Test
+    fun `openSummary falls back to the latest due when everything is overdue`() {
+        val state = BillsUiState(
+            invoices = listOf(
+                invoice(1, LocalDate.of(2026, 3, 10)),
+                invoice(2, LocalDate.of(2026, 4, 20)),
+            ),
+        )
+
+        val summary = state.openSummary(LocalDate.of(2026, 5, 1))
+
+        assertEquals(LocalDate.of(2026, 4, 20), summary.nextDue)
+    }
+
+    @Test
+    fun `openSummary is empty when there are no open invoices`() {
+        val state = BillsUiState(
+            invoices = listOf(
+                invoice(1, LocalDate.of(2026, 5, 10)).copy(statusId = 2),
+            ),
+        )
+
+        val summary = state.openSummary(LocalDate.of(2026, 5, 1))
+
+        assertEquals(0, summary.count)
+        assertEquals(0.0, summary.total, 0.001)
+        assertEquals(null, summary.nextDue)
+    }
 }

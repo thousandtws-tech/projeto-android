@@ -27,7 +27,7 @@ data class Invoice(
     val pixCode: String?,
     /** Whether the contract allows on-demand PIX generation (`gerarpix`). */
     val canGeneratePix: Boolean,
-    /** Relative boleto path (`link`). Combine with the API base URL to open. */
+    /** Absolute boleto URL (`link`), resolved against the API base URL at ingest. */
     val boletoPath: String?,
 ) {
     val status: InvoiceStatus

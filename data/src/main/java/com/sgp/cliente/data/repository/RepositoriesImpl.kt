@@ -120,6 +120,7 @@ class ContractRepositoryImpl @Inject constructor(
 @Singleton
 class InvoiceRepositoryImpl @Inject constructor(
     private val remote: CentralAppRemoteDataSource,
+    private val baseUrlProvider: BaseUrlProvider,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : InvoiceRepository {
 
@@ -194,7 +195,7 @@ class InvoiceRepositoryImpl @Inject constructor(
                 offset = offset,
                 limit = limit,
             ).map { dtoPage ->
-                val invoices = dtoPage.items.mapNotNull { it.toDomain() }
+                val invoices = dtoPage.items.mapNotNull { it.toDomain()?.withResolvedBoleto() }
                 val page = PagedResult(
                     items = invoices,
                     offset = offset,
@@ -279,11 +280,21 @@ class InvoiceRepositoryImpl @Inject constructor(
             onFailure = { AppResult.failure(it) },
             onSuccess = { dto ->
                 dto.toDomain()
+                    ?.withResolvedBoleto()
                     ?.let { AppResult.success(it) }
                     ?: AppResult.failure(AppError.NotFound)
             },
         )
     }
+
+    /** `link`/`chargeUrl` arrive relative to the API host — resolve once so
+     * consumers can open the boleto without knowing the base URL. */
+    private fun Invoice.withResolvedBoleto(): Invoice =
+        copy(
+            boletoPath = boletoPath?.let {
+                baseUrlProvider.current().resolve(it)?.toString() ?: it
+            },
+        )
 
     private fun Int?.toInvoiceGroup(): InvoiceGroup = when (this) {
         1 -> InvoiceGroup.OPEN

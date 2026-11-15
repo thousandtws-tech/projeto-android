@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Alterado
+- Cards de fatura na lista viram cards completos estilo referência: badge
+  de status ("Vencida · Prioridade" para atrasadas com fundo
+  `errorContainer`), botão outlined "Ver fatura", blocos
+  Vencimento/Valor/Nº da fatura, e **ações de pagamento inline** — Copiar
+  código (linha digitável), Copiar PIX e Abrir boleto (PDF) — sem abrir a
+  tela de detalhes; ações sem dado na API aparecem desabilitadas.
+- `Invoice.boletoPath` passa a chegar como URL absoluta (resolvida contra
+  a base configurada no `InvoiceRepositoryImpl`) — a UI só abre, sem
+  conhecer o host.
 - Detalhes da fatura agora abrem em `ModalBottomSheet` (M3) sobre a tela
   atual em vez de uma rota dedicada: drag handle nativo, dismiss por swipe
   para baixo, gesto Back ou toque no scrim; `BillDetailsViewModel` passa a
@@ -15,6 +24,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
 ### Adicionado
+- Card de resumo na tela de Faturas (`OpenSummaryCard`): quantidade de
+  faturas em aberto, valor total em aberto e vencimento mais próximo —
+  visível apenas nos filtros Todas/Em aberto quando há faturas abertas;
+  `BillsUiState.openSummary(today)` com testes.
 - Modernização da tela de Faturas: card de atenção "Fatura em atraso"
   (errorContainer + pill "Pagar agora") quando há vencida nos filtros
   Todas/Em aberto; headers de competência com contagem e subtotal real;

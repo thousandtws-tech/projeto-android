@@ -1,6 +1,7 @@
 package com.sgp.cliente.data.repository
 
 import com.sgp.cliente.core.common.result.AppResult
+import com.sgp.cliente.core.network.api.BaseUrlProvider
 import com.sgp.cliente.data.remote.centralapp.CentralAppRemoteDataSource
 import com.sgp.cliente.data.remote.centralapp.CentralInvoiceDto
 import com.sgp.cliente.data.remote.centralapp.CentralInvoicePage
@@ -35,7 +36,14 @@ class InvoiceRepositoryImplTest {
 
     private val remote = mockk<CentralAppRemoteDataSource>()
     private val clock = MutableClock()
-    private val repository = InvoiceRepositoryImpl(remote = remote, clock = clock)
+    private val baseUrlProvider = BaseUrlProvider().apply {
+        update("https://demo.sgp.net.br")
+    }
+    private val repository = InvoiceRepositoryImpl(
+        remote = remote,
+        baseUrlProvider = baseUrlProvider,
+        clock = clock,
+    )
 
     private fun page(vararg ids: Int) = CentralInvoicePage(
         items = ids.map {
@@ -181,6 +189,58 @@ class InvoiceRepositoryImplTest {
         val result = repository.getInvoices(101, statusFilter = null, limit = 25)
 
         assertEquals(2, result.getOrNull()!!.total)
+    }
+
+    @Test
+    fun `relative boleto link resolves against the configured base url`() = runTest {
+        stubPage(
+            InvoiceGroup.OPEN,
+            result = CentralInvoicePage(
+                items = listOf(
+                    CentralInvoiceDto(
+                        id = 7,
+                        status = "Em aberto",
+                        dueDate = "10/03/2026",
+                        amount = "100.0",
+                        boletoUrl = "/fatura/boleto/abc123.pdf",
+                    ),
+                ),
+                total = null,
+            ),
+        )
+
+        val result = repository.getInvoices(101, statusFilter = 1)
+
+        assertEquals(
+            "https://demo.sgp.net.br/fatura/boleto/abc123.pdf",
+            result.getOrNull()!!.items.single().boletoPath,
+        )
+    }
+
+    @Test
+    fun `absolute boleto link passes through unchanged`() = runTest {
+        stubPage(
+            InvoiceGroup.OPEN,
+            result = CentralInvoicePage(
+                items = listOf(
+                    CentralInvoiceDto(
+                        id = 8,
+                        status = "Em aberto",
+                        dueDate = "10/03/2026",
+                        amount = "100.0",
+                        chargeUrl = "https://pgw.exemplo.com/c/xyz",
+                    ),
+                ),
+                total = null,
+            ),
+        )
+
+        val result = repository.getInvoices(101, statusFilter = 1)
+
+        assertEquals(
+            "https://pgw.exemplo.com/c/xyz",
+            result.getOrNull()!!.items.single().boletoPath,
+        )
     }
 
     @Test
