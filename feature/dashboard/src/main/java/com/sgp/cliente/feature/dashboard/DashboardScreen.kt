@@ -21,8 +21,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,6 +36,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -57,7 +57,6 @@ import com.sgp.cliente.core.common.format.MoneyFormatter
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
 import com.sgp.cliente.core.designsystem.adaptive.currentWindowWidthSizeClass
 import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
-import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpEmptyState
 import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
@@ -176,22 +175,16 @@ private fun LazyListScope.dashboardItems(
         QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
     }
 
-    item { InvoicesHeader() }
+    item { InvoicesHeader(onOpenBills) }
 
     val current = uiState.currentInvoice
     if (current != null) {
         item {
-            CurrentInvoiceCard(
-                invoice = current,
+            InvoicesCarousel(
+                current = current,
+                next = uiState.all.filter { it.id != current.id },
                 today = today,
-                onClick = { onOpenInvoice(current.id) },
-            )
-        }
-        items(uiState.all.filter { it.id != current.id }, key = { it.id }) { invoice ->
-            InvoiceSummaryCard(
-                invoice = invoice,
-                today = today,
-                onClick = { onOpenInvoice(invoice.id) },
+                onOpenInvoice = onOpenInvoice,
             )
         }
     } else {
@@ -228,22 +221,16 @@ private fun LazyGridScope.dashboardItems(
         QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
     }
 
-    item(span = { GridItemSpan(maxLineSpan) }) { InvoicesHeader() }
+    item(span = { GridItemSpan(maxLineSpan) }) { InvoicesHeader(onOpenBills) }
 
     val current = uiState.currentInvoice
     if (current != null) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            CurrentInvoiceCard(
-                invoice = current,
+            InvoicesCarousel(
+                current = current,
+                next = uiState.all.filter { it.id != current.id },
                 today = today,
-                onClick = { onOpenInvoice(current.id) },
-            )
-        }
-        items(uiState.all.filter { it.id != current.id }, key = { it.id }) { invoice ->
-            InvoiceSummaryCard(
-                invoice = invoice,
-                today = today,
-                onClick = { onOpenInvoice(invoice.id) },
+                onOpenInvoice = onOpenInvoice,
             )
         }
     } else {
@@ -489,52 +476,165 @@ private fun QuickActionCard(
 }
 
 @Composable
-private fun InvoicesHeader() {
-    Text(
-        text = "Minhas faturas",
-        style = MaterialTheme.typography.titleSmall,
+private fun InvoicesHeader(onOpenBills: () -> Unit) {
+    Row(
         modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Minhas faturas",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onOpenBills) {
+            Text("Ver todas")
+        }
+    }
 }
 
-/** Highlighted current invoice — tinted card like the reference's red card. */
+/** M3 uncontained carousel: a full-color hero card for the current invoice
+ * followed by compact tonal cards — the peeked edge is the affordance,
+ * matching the reference's swipable invoice cards. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CurrentInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
-    val overdue = invoice.isOverdue(today)
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
-        shape = RoundedCornerShape(20.dp),
+private fun InvoicesCarousel(
+    current: Invoice,
+    next: List<Invoice>,
+    today: LocalDate,
+    onOpenInvoice: (Int) -> Unit,
+) {
+    val itemCount = next.size + 1
+    val state = rememberCarouselState { itemCount }
+    HorizontalUncontainedCarousel(
+        state = state,
+        itemWidth = 300.dp,
+        itemSpacing = Spacing.sm,
         modifier = Modifier.fillMaxWidth(),
+    ) { index ->
+        if (index == 0) {
+            CurrentInvoiceHeroCard(
+                invoice = current,
+                today = today,
+                onClick = { onOpenInvoice(current.id) },
+                modifier = Modifier.maskClip(RoundedCornerShape(24.dp)),
+            )
+        } else {
+            val invoice = next[index - 1]
+            NextInvoiceCard(
+                invoice = invoice,
+                today = today,
+                onClick = { onOpenInvoice(invoice.id) },
+                modifier = Modifier.maskClip(RoundedCornerShape(24.dp)),
+            )
+        }
+    }
+}
+
+/** Full-color current invoice — the reference's highlighted payable card,
+ * with an on-card "Pagar agora" action. */
+@Composable
+private fun CurrentInvoiceHeroCard(
+    invoice: Invoice,
+    today: LocalDate,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val overdue = invoice.isOverdue(today)
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.fillMaxWidth().height(160.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
+        Column(modifier = Modifier.fillMaxSize().padding(Spacing.md)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     text = "Fatura atual",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = onPrimary.copy(alpha = 0.75f),
+                    modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = MoneyFormatter.brl(invoice.displayAmount),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    text = DateFormatter.display(invoice.effectiveOrOriginalDueDate),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+                Surface(color = onPrimary.copy(alpha = 0.18f), shape = CircleShape) {
+                    Text(
+                        text = if (overdue) "Vencida" else "Em aberto",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = onPrimary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
             }
+            Text(
+                text = MoneyFormatter.brl(invoice.displayAmount),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = onPrimary,
+            )
+            Text(
+                text = (if (overdue) "Venceu em " else "Vence em ") +
+                    DateFormatter.display(invoice.effectiveOrOriginalDueDate),
+                style = MaterialTheme.typography.bodySmall,
+                color = onPrimary.copy(alpha = 0.85f),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(top = Spacing.xs),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Surface(
+                    onClick = onClick,
+                    color = onPrimary,
+                    shape = CircleShape,
+                ) {
+                    Text(
+                        text = "Pagar agora",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Compact tonal card for the upcoming invoices in the carousel. */
+@Composable
+private fun NextInvoiceCard(
+    invoice: Invoice,
+    today: LocalDate,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val overdue = invoice.isOverdue(today)
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.fillMaxWidth().height(160.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(Spacing.md),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "Vence em ${DateFormatter.display(invoice.effectiveOrOriginalDueDate)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = MoneyFormatter.brl(invoice.displayAmount),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             SgpStatusBadge(
                 text = if (overdue) "Vencida" else "Em aberto",
                 kind = if (overdue) SgpBadgeKind.OVERDUE else SgpBadgeKind.OPEN,
+                modifier = Modifier.padding(top = Spacing.xs),
             )
         }
     }
@@ -547,34 +647,6 @@ private fun OpenInvoicesEmpty() {
         message = "Você não possui boletos pendentes no momento.",
         modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
     )
-}
-
-@Composable
-private fun InvoiceSummaryCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
-    val overdue = invoice.isOverdue(today)
-    SgpCard(onClick = onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text(
-                    text = MoneyFormatter.brl(invoice.displayAmount),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = "Vence em ${DateFormatter.display(invoice.effectiveOrOriginalDueDate)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            SgpStatusBadge(
-                text = if (overdue) "Vencida" else "Em aberto",
-                kind = if (overdue) SgpBadgeKind.OVERDUE else SgpBadgeKind.OPEN,
-            )
-        }
-    }
 }
 
 private val CustomerSession.firstName: String

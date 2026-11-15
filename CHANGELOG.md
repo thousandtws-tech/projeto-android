@@ -5,6 +5,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
+- "Minhas faturas" do Dashboard migrada para `HorizontalUncontainedCarousel`
+  (M3 1.4.0): card hero full-color da fatura atual (status pill translúcido
+  + ação "Pagar agora" em pill branca), cards tonais das próximas faturas
+  com `maskClip`, e header com ação "Ver todas".
 - Hero do Dashboard refinado ao padrão da referência: container arredondado
   com margens, plano exibido direto sobre o fundo da marca (sem card
   interno), círculos decorativos vazando no canto superior direito, pill de
