@@ -1,0 +1,32 @@
+# Gradle / build
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android Studio / IDE
+.idea/
+*.iml
+.cxx/
+.externalNativeBuild/
+
+# Kotlin/Java
+*.class
+*.jar
+*.dex
+
+# Keystore — nunca versionar
+*.jks
+*.keystore
+keystore.properties
+
+# Firebase — gerado por ambiente
+google-services.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lint / reports
+lint-results*.html
+lint-results*.sarif

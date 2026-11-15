@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Regras de backup (API < 31). A sessão (credenciais criptografadas via
+   Keystore e dados do contrato) NÃO vai para backup em nuvem — a chave não
+   acompanha o backup e a LGPD pede minimização: dado sensível fica só no
+   dispositivo. Configurações não pessoais (URL do servidor) podem ser
+   preservadas.
+-->
+<full-backup-content>
+    <exclude
+        domain="file"
+        path="datastore/sgp_session.preferences_pb" />
+</full-backup-content>
