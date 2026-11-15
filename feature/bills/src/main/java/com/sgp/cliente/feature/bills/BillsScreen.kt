@@ -45,6 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -447,13 +448,14 @@ private fun BillsUiState.attentionInvoice(today: LocalDate): Invoice? =
         null
     }
 
-/** Attention card pinned to the top when an invoice is overdue — the
- * money-owed call to action users must not miss. */
+/** Attention card pinned to the top when an invoice is overdue — neutral
+ * surface (provider-app pattern: status is a small badge, not a red card)
+ * with a standard primary button. */
 @Composable
 private fun OverdueInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        color = MaterialTheme.colorScheme.errorContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -462,37 +464,25 @@ private fun OverdueInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "Fatura em atraso",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.weight(1f),
-                )
-                Surface(
+                SgpStatusBadge(text = "Fatura em atraso", kind = SgpBadgeKind.OVERDUE)
+                Spacer(Modifier.weight(1f))
+                Button(
                     onClick = onClick,
-                    color = MaterialTheme.colorScheme.error,
-                    shape = CircleShape,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                 ) {
-                    Text(
-                        text = "Pagar agora",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onError,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    )
+                    Text("Pagar agora", style = MaterialTheme.typography.labelLarge)
                 }
             }
             Text(
                 text = MoneyFormatter.brl(invoice.displayAmount),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             Text(
                 text = DateFormatter.dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -579,21 +569,10 @@ private fun InvoiceCard(
 ) {
     val overdue = invoice.isOverdue(today)
     val payable = invoice.status == InvoiceStatus.OPEN
-    val containerColor = if (overdue) {
-        MaterialTheme.colorScheme.errorContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    val contentColor = if (overdue) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
 
     Surface(
         onClick = onOpenInvoice,
-        color = containerColor,
-        contentColor = contentColor,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -646,7 +625,7 @@ private fun InvoiceCard(
             }
 
             if (payable) {
-                HorizontalDivider(color = contentColor.copy(alpha = 0.12f))
+                HorizontalDivider(color = LocalContentColor.current.copy(alpha = 0.12f))
                 // Only actions backed by real API data are rendered — a PIX
                 // button exists only when a code can actually be copied (the
                 // PIX-in-boleto case is already covered by "Abrir boleto"),
@@ -692,7 +671,7 @@ private fun InvoiceCard(
                     Text(
                         text = "Pagamento indisponível",
                         style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.6f),
+                        color = LocalContentColor.current.copy(alpha = 0.6f),
                     )
                 }
             }
