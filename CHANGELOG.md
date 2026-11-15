@@ -10,6 +10,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   para baixo, gesto Back ou toque no scrim; `BillDetailsViewModel` passa a
   aceitar `show(invoiceId)` (reset + reload) para reutilização entre
   faturas; `Routes.BILL_DETAILS` removida.
+- A sheet de detalhes abre na altura do conteúdo (lista permanece visível
+  esmaecida acima): `LazyColumn` interna substituída por `Column` com
+  `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
 ### Adicionado
 - Modernização da tela de Faturas: card de atenção "Fatura em atraso"
