@@ -649,15 +649,24 @@ private fun InvoiceCard(
                     PaymentAction(
                         icon = Icons.Filled.QrCode2,
                         title = "Copiar PIX",
+                        // Provider may embed PIX inside the boleto instead of
+                        // exposing a code — route the tap there in that case.
                         caption = when {
                             invoice.pixCode != null -> "Pague agora"
                             invoice.canGeneratePix -> "Gerar agora"
+                            invoice.boletoPath != null -> "No boleto"
                             else -> "Indisponível"
                         },
-                        enabled = invoice.pixCode != null || invoice.canGeneratePix,
+                        enabled = invoice.pixCode != null ||
+                            invoice.canGeneratePix ||
+                            invoice.boletoPath != null,
                         loading = generatingPix,
                         modifier = Modifier.weight(1f),
-                        onAction = onPix,
+                        onAction = if (invoice.pixCode != null || invoice.canGeneratePix) {
+                            onPix
+                        } else {
+                            { onOpenBoleto(invoice) }
+                        },
                     )
                     PaymentAction(
                         icon = Icons.Outlined.PictureAsPdf,

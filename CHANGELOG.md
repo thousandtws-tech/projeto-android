@@ -16,7 +16,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   chama `GeneratePixUseCase` → `POST titulo/{id}/pix/` com spinner no
   card, copia o código gerado e mergea no estado (próximo toque copia
   direto); falha vira snackbar de erro. Legenda honesta: "Pague agora" /
-  "Gerar agora" / "Indisponível". Confirmação de cópia via snackbar.
+  "Gerar agora" / "No boleto" (provider embute o PIX no boleto — toque
+  abre o PDF) / "Indisponível". Confirmação de cópia via snackbar.
 - `Invoice.boletoPath` passa a chegar como URL absoluta (resolvida contra
   a base configurada no `InvoiceRepositoryImpl`) — a UI só abre, sem
   conhecer o host.
