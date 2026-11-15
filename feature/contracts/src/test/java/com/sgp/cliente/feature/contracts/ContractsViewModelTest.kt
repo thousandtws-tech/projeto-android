@@ -6,6 +6,7 @@ import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.SessionState
 import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
+import com.sgp.cliente.domain.usecase.contract.GetContractOpenBillCountsUseCase
 import com.sgp.cliente.domain.usecase.contract.SelectContractUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,6 +35,7 @@ class ContractsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val observeSession: ObserveSessionUseCase = mockk()
     private val selectContract: SelectContractUseCase = mockk()
+    private val getOpenBillCounts: GetContractOpenBillCountsUseCase = mockk()
     private lateinit var viewModel: ContractsViewModel
 
     private val contract1 = contract(id = 1)
@@ -61,6 +63,7 @@ class ContractsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         coEvery { selectContract(any()) } returns Unit
+        coEvery { getOpenBillCounts(any()) } returns mapOf(1 to 2, 2 to 1)
     }
 
     @After
@@ -70,7 +73,7 @@ class ContractsViewModelTest {
     fun `logged-in session exposes the contract list and the selected id`() = runTest {
         every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
 
-        viewModel = ContractsViewModel(observeSession, selectContract)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -83,7 +86,7 @@ class ContractsViewModelTest {
     fun `session updates refresh the exposed selection`() = runTest {
         val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session(1)))
         every { observeSession() } returns sessionFlow
-        viewModel = ContractsViewModel(observeSession, selectContract)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.selectedContractId)
 
@@ -97,7 +100,7 @@ class ContractsViewModelTest {
     fun `logged-out state keeps the screen in its initial loading state`() = runTest {
         every { observeSession() } returns flowOf(SessionState.LoggedOut)
 
-        viewModel = ContractsViewModel(observeSession, selectContract)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -109,7 +112,7 @@ class ContractsViewModelTest {
     @Test
     fun `select delegates to the use case and emits the navigation event`() = runTest {
         every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
-        viewModel = ContractsViewModel(observeSession, selectContract)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.events.test {
@@ -124,5 +127,33 @@ class ContractsViewModelTest {
         }
 
         coVerify(exactly = 1) { selectContract(2) }
+    }
+
+    @Test
+    fun `contracts without open boletos are hidden after probing`() = runTest {
+        every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
+        coEvery { getOpenBillCounts(any()) } returns mapOf(1 to 2, 2 to 0)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf(contract1), state.visibleContracts)
+        assertEquals(1, state.hiddenCount)
+        assertFalse(state.probing)
+        coVerify(exactly = 1) { getOpenBillCounts(listOf(contract1, contract2)) }
+    }
+
+    @Test
+    fun `a failed probe keeps the contract visible and showAll reveals hidden ones`() = runTest {
+        every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
+        coEvery { getOpenBillCounts(any()) } returns mapOf(1 to 0, 2 to null)
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        // Probe failed for contract2 (null) — keep it rather than hiding it.
+        assertEquals(listOf(contract2), viewModel.uiState.value.visibleContracts)
+
+        viewModel.toggleShowAll()
+        assertEquals(listOf(contract1, contract2), viewModel.uiState.value.visibleContracts)
     }
 }

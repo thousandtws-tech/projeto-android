@@ -38,6 +38,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
 ### Adicionado
+- Seletor de contratos filtra por boleto em aberto: cada contrato é
+  sondado em paralelo via `GetContractOpenBillCountsUseCase`
+  (`titulo/list` grupo=abertos, limit=1) e só os com boleto
+  aberto/gerado aparecem, com legenda "N boletos em aberto"; sondagem
+  falha não esconde o contrato (fail-open), e "Ver todos os contratos
+  (N ocultos)" restaura suspensos/cancelados.
 - Card de resumo na tela de Faturas (`OpenSummaryCard`): quantidade de
   faturas em aberto, valor total em aberto e vencimento mais próximo —
   visível apenas nos filtros Todas/Em aberto quando há faturas abertas;

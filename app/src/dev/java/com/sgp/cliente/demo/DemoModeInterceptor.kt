@@ -68,7 +68,7 @@ class DemoModeInterceptor @Inject constructor(
         path.endsWith("api/centralapp/login/") -> loginPayload(request)
         path.endsWith("api/centralapp/clientecontrato/list/") -> CONTRACTS
         path.endsWith("api/centralapp/titulo/list/") ->
-            invoices(request.formField("grupo"))
+            invoices(request.formField("grupo"), request.formField("contrato"))
         path.contains(Regex("api/centralapp/titulo/\\d+/detail/")) -> INVOICE_DETAIL
         path.contains(Regex("api/centralapp/titulo/\\d+/pix/")) -> PIX
         path.contains(Regex("api/centralapp/titulo/\\d+/(email|sms)/send/")) -> SEND_COPY
@@ -107,10 +107,13 @@ class DemoModeInterceptor @Inject constructor(
         }.getOrNull()
     }
 
-    private fun invoices(group: String?): String = when (group) {
-        "pagos" -> """[$INVOICE_PAID_1,$INVOICE_PAID_2]"""
-        "abertos" -> """[$INVOICE_OPEN_1,$INVOICE_OPEN_2,$INVOICE_OPEN_PIX]"""
-        "canceladas" -> """[$INVOICE_CANCELLED]"""
+    // Contract 102 is suspended and has no open boletos — used by the
+    // contract picker filter.
+    private fun invoices(group: String?, contractId: String?): String = when {
+        contractId == "102" -> "[]"
+        group == "pagos" -> """[$INVOICE_PAID_1,$INVOICE_PAID_2]"""
+        group == "abertos" -> """[$INVOICE_OPEN_1,$INVOICE_OPEN_2,$INVOICE_OPEN_PIX]"""
+        group == "canceladas" -> """[$INVOICE_CANCELLED]"""
         else -> INVOICES_ALL
     }
 
