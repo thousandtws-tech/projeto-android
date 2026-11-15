@@ -47,19 +47,27 @@ class BillDetailsViewModel @Inject constructor(
     private val requestPaymentPromise: RequestPaymentPromiseUseCase,
 ) : ViewModel() {
 
-    private val invoiceId: Int = checkNotNull(savedStateHandle["invoiceId"])
+    private var invoiceId: Int? = savedStateHandle["invoiceId"]
 
     private val _uiState = MutableStateFlow(BillDetailsUiState())
     val uiState: StateFlow<BillDetailsUiState> = _uiState.asStateFlow()
 
     init {
+        if (invoiceId != null) load()
+    }
+
+    /** Opens an invoice — resets state and loads (sheet usage reuses the VM). */
+    fun show(id: Int) {
+        invoiceId = id
+        _uiState.value = BillDetailsUiState()
         load()
     }
 
     fun load() {
+        val id = invoiceId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
-            getDetails(invoiceId).fold(
+            getDetails(id).fold(
                 onSuccess = { invoice ->
                     _uiState.update { it.copy(loading = false, invoice = invoice) }
                 },
@@ -71,10 +79,11 @@ class BillDetailsViewModel @Inject constructor(
     }
 
     fun loadPix() {
+        val id = invoiceId ?: return
         if (_uiState.value.loadingPix || _uiState.value.pixCode != null) return
         viewModelScope.launch {
             _uiState.update { it.copy(loadingPix = true, actionError = null) }
-            generatePix(invoiceId).fold(
+            generatePix(id).fold(
                 onSuccess = { pix ->
                     _uiState.update {
                         it.copy(
@@ -95,9 +104,10 @@ class BillDetailsViewModel @Inject constructor(
     fun sendCopyByEmail() = send(SendChannel.EMAIL)
 
     private fun send(channel: SendChannel) {
+        val id = invoiceId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(sendingCopy = true, actionError = null) }
-            sendCopy(invoiceId, channel).fold(
+            sendCopy(id, channel).fold(
                 onSuccess = { message ->
                     _uiState.update { it.copy(sendingCopy = false, sentCopyMessage = message) }
                 },

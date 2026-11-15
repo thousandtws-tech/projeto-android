@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ## [Unreleased]
 
+### Alterado
+- Detalhes da fatura agora abrem em `ModalBottomSheet` (M3) sobre a tela
+  atual em vez de uma rota dedicada: drag handle nativo, dismiss por swipe
+  para baixo, gesto Back ou toque no scrim; `BillDetailsViewModel` passa a
+  aceitar `show(invoiceId)` (reset + reload) para reutilização entre
+  faturas; `Routes.BILL_DETAILS` removida.
+
 ### Adicionado
 - Modernização da tela de Faturas: card de atenção "Fatura em atraso"
   (errorContainer + pill "Pagar agora") quando há vencida nos filtros

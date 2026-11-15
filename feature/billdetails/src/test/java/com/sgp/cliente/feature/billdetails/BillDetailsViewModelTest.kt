@@ -113,9 +113,37 @@ class BillDetailsViewModelTest {
         assertEquals(AppError.NotFound, state.error)
     }
 
-    @Test(expected = IllegalStateException::class)
-    fun `missing invoiceId argument fails fast`() {
-        viewModel(invoiceId = null)
+    @Test
+    fun `missing invoiceId stays idle until show is called`() = runTest {
+        viewModel = viewModel(invoiceId = null)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.loading)
+        coVerify(exactly = 0) { getDetails(any()) }
+
+        stubLoaded(invoice(id = 42))
+        viewModel.show(42)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(42, viewModel.uiState.value.invoice?.id)
+        coVerify(exactly = 1) { getDetails(42) }
+    }
+
+    @Test
+    fun `show resets state and loads a different invoice`() = runTest {
+        stubLoaded(invoice(id = 42))
+        coEvery { getDetails(7) } returns AppResult.success(invoice(id = 7))
+        viewModel = viewModel(42)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.show(7)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(7, state.invoice?.id)
+        assertNull(state.generatedPix)
+        assertNull(state.sentCopyMessage)
+        coVerify(exactly = 1) { getDetails(7) }
     }
 
     @Test

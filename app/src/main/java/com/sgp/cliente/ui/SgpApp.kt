@@ -11,22 +11,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.sgp.cliente.MainViewModel
 import com.sgp.cliente.R
 import com.sgp.cliente.core.designsystem.components.SgpLoadingView
 import com.sgp.cliente.domain.model.SessionState
 import com.sgp.cliente.feature.auth.LoginScreen
-import com.sgp.cliente.feature.billdetails.BillDetailsScreen
+import com.sgp.cliente.feature.billdetails.BillDetailsSheet
 import com.sgp.cliente.feature.contracts.ContractsScreen
 import com.sgp.cliente.feature.onboarding.OnboardingScreen
 import com.sgp.cliente.feature.profile.PreferencesScreen
@@ -41,8 +42,6 @@ object Routes {
     const val MAIN = "main"
     const val PRIVACY = "privacy"
     const val PREFERENCES = "preferences"
-    const val BILL_DETAILS = "bill_details/{invoiceId}"
-    fun billDetails(invoiceId: Int) = "bill_details/$invoiceId"
 }
 
 @Composable
@@ -128,20 +127,17 @@ fun SgpApp(
         }
 
         composable(Routes.MAIN) { entry ->
+            var invoiceDetailId by rememberSaveable { mutableStateOf<Int?>(null) }
             MainTabs(
-                onOpenInvoice = { id -> navController.navigate(Routes.billDetails(id)) },
+                onOpenInvoice = { id -> invoiceDetailId = id },
                 onOpenPreferences = { navController.navigate(Routes.PREFERENCES) },
                 onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
                 onOpenContracts = { navController.navigate(Routes.CONTRACTS) },
                 viewModelStoreOwner = entry,
             )
-        }
-
-        composable(
-            route = Routes.BILL_DETAILS,
-            arguments = listOf(navArgument("invoiceId") { type = NavType.IntType }),
-        ) {
-            BillDetailsScreen(onBack = { navController.popBackStack() })
+            invoiceDetailId?.let { id ->
+                BillDetailsSheet(invoiceId = id, onDismiss = { invoiceDetailId = null })
+            }
         }
     }
 }
