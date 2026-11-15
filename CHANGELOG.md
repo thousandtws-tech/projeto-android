@@ -38,6 +38,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
 ### Adicionado
+- Ações de pagamento do card de fatura são deduplicadas: só aparecem
+  quando a API traz dado real para elas — "Copiar PIX" só quando um
+  código pode ser copiado (inline ou sob demanda), sem o modo
+  "No boleto" que duplicava "Abrir boleto"; ações sem dado deixam de
+  ocupar espaço, e fatura sem nenhum caminho de pagamento mostra a
+  legenda "Pagamento indisponível".
 - Seletor de contratos filtra por boleto em aberto: cada contrato é
   sondado em paralelo via `GetContractOpenBillCountsUseCase`
   (`titulo/list` grupo=abertos, limit=1) e só os com boleto

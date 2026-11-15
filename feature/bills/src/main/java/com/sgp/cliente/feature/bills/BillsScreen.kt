@@ -647,43 +647,53 @@ private fun InvoiceCard(
 
             if (payable) {
                 HorizontalDivider(color = contentColor.copy(alpha = 0.12f))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    PaymentAction(
-                        icon = Icons.Outlined.ContentCopy,
-                        title = "Copiar código",
-                        caption = "Linha digitável",
-                        enabled = invoice.barcode != null,
-                        modifier = Modifier.weight(1f),
-                    ) { onCopyValue(invoice.barcode!!) }
-                    PaymentAction(
-                        icon = Icons.Filled.QrCode2,
-                        title = "Copiar PIX",
-                        // Provider may embed PIX inside the boleto instead of
-                        // exposing a code — route the tap there in that case.
-                        caption = when {
-                            invoice.pixCode != null -> "Pague agora"
-                            invoice.canGeneratePix -> "Gerar agora"
-                            invoice.boletoPath != null -> "No boleto"
-                            else -> "Indisponível"
-                        },
-                        enabled = invoice.pixCode != null ||
-                            invoice.canGeneratePix ||
-                            invoice.boletoPath != null,
-                        loading = generatingPix,
-                        modifier = Modifier.weight(1f),
-                        onAction = if (invoice.pixCode != null || invoice.canGeneratePix) {
-                            onPix
-                        } else {
-                            { onOpenBoleto(invoice) }
-                        },
+                // Only actions backed by real API data are rendered — a PIX
+                // button exists only when a code can actually be copied (the
+                // PIX-in-boleto case is already covered by "Abrir boleto"),
+                // so no two buttons ever do the same thing.
+                val hasAnyAction = invoice.barcode != null ||
+                    invoice.pixCode != null ||
+                    invoice.canGeneratePix ||
+                    invoice.boletoPath != null
+                if (hasAnyAction) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        if (invoice.pixCode != null || invoice.canGeneratePix) {
+                            PaymentAction(
+                                icon = Icons.Filled.QrCode2,
+                                title = "Copiar PIX",
+                                caption = if (invoice.pixCode != null) {
+                                    "Pague agora"
+                                } else {
+                                    "Gerar agora"
+                                },
+                                loading = generatingPix,
+                                modifier = Modifier.weight(1f),
+                                onAction = onPix,
+                            )
+                        }
+                        if (invoice.barcode != null) {
+                            PaymentAction(
+                                icon = Icons.Outlined.ContentCopy,
+                                title = "Copiar código",
+                                caption = "Linha digitável",
+                                modifier = Modifier.weight(1f),
+                            ) { onCopyValue(invoice.barcode!!) }
+                        }
+                        if (invoice.boletoPath != null) {
+                            PaymentAction(
+                                icon = Icons.Outlined.PictureAsPdf,
+                                title = "Abrir boleto",
+                                caption = "Visualizar PDF",
+                                modifier = Modifier.weight(1f),
+                            ) { onOpenBoleto(invoice) }
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Pagamento indisponível",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.6f),
                     )
-                    PaymentAction(
-                        icon = Icons.Outlined.PictureAsPdf,
-                        title = "Abrir boleto",
-                        caption = "Visualizar PDF",
-                        enabled = invoice.boletoPath != null,
-                        modifier = Modifier.weight(1f),
-                    ) { onOpenBoleto(invoice) }
                 }
             }
         }
@@ -707,15 +717,14 @@ private fun InvoiceInfo(label: String, value: String, modifier: Modifier = Modif
     }
 }
 
-/** Copy/open quick action — disabled look when the API carries no value
- * for it on this invoice; `loading` swaps the icon for a spinner
+/** Copy/open quick action — only rendered when the API carries a real
+ * value for it on this invoice; `loading` swaps the icon for a spinner
  * (on-demand PIX generation in flight). */
 @Composable
 private fun PaymentAction(
     icon: ImageVector,
     title: String,
     caption: String,
-    enabled: Boolean,
     modifier: Modifier = Modifier,
     loading: Boolean = false,
     onAction: () -> Unit,
@@ -723,8 +732,7 @@ private fun PaymentAction(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .clickable(enabled = enabled && !loading, onClick = onAction)
-            .alpha(if (enabled) 1f else 0.38f)
+            .clickable(enabled = !loading, onClick = onAction)
             .padding(vertical = Spacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
