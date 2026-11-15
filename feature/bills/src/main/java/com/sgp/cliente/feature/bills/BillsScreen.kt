@@ -1,14 +1,26 @@
 package com.sgp.cliente.feature.bills
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -30,9 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,14 +51,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
@@ -66,6 +83,9 @@ import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
 import com.sgp.cliente.core.designsystem.theme.LayoutTokens
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
+import com.sgp.cliente.core.designsystem.theme.StatusCancelled
+import com.sgp.cliente.core.designsystem.theme.StatusOpen
+import com.sgp.cliente.core.designsystem.theme.StatusPaid
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import java.time.LocalDate
@@ -132,26 +152,98 @@ fun BillsScreen(
     }
 }
 
+private data class FilterOption(
+    val status: InvoiceStatus?,
+    val label: String,
+    val dotColor: Color?,
+)
+
+/** Animated pill segmented control: tonal track + sliding white indicator,
+ * semantic status dots matching the invoice row badges. */
 @Composable
 private fun StatusFilters(selected: InvoiceStatus?, onSelect: (InvoiceStatus?) -> Unit) {
     val options = listOf(
-        null to "Todas",
-        InvoiceStatus.OPEN to "Em aberto",
-        InvoiceStatus.PAID to "Pagas",
-        InvoiceStatus.CANCELLED to "Canceladas",
+        FilterOption(null, "Todas", null),
+        FilterOption(InvoiceStatus.OPEN, "Em aberto", StatusOpen),
+        FilterOption(InvoiceStatus.PAID, "Pagas", StatusPaid),
+        FilterOption(InvoiceStatus.CANCELLED, "Canceladas", StatusCancelled),
     )
-    SingleChoiceSegmentedButtonRow(
+    val selectedIndex = options.indexOfFirst { it.status == selected }.coerceAtLeast(0)
+
+    // Measured segment positions (content-sized, so the control still
+    // scrolls horizontally on narrow screens).
+    val segmentBounds = remember { mutableStateMapOf<Int, Pair<Float, Float>>() }
+    val target = segmentBounds[selectedIndex] ?: (0f to 0f)
+    val indicatorX by animateFloatAsState(
+        targetValue = target.first,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "segX",
+    )
+    val indicatorW by animateFloatAsState(
+        targetValue = target.second,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "segW",
+    )
+
+    Box(
         modifier = Modifier
+            .padding(horizontal = Spacing.md, vertical = Spacing.xs)
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+            .padding(4.dp),
     ) {
-        options.forEachIndexed { index, (status, label) ->
-            SegmentedButton(
-                selected = selected == status,
-                onClick = { onSelect(status) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-            ) {
-                Text(label)
+        if (indicatorW > 0f) {
+            Box(
+                Modifier
+                    .offset { IntOffset(indicatorX.roundToInt(), 0) }
+                    .width(with(LocalDensity.current) { indicatorW.toDp() })
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(50)),
+            )
+        }
+        Row {
+            options.forEachIndexed { index, option ->
+                val isSelected = index == selectedIndex
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .onGloballyPositioned { coordinates ->
+                            segmentBounds[index] =
+                                coordinates.positionInParent().x to
+                                    coordinates.size.width.toFloat()
+                        }
+                        .clip(RoundedCornerShape(50))
+                        .clickable { onSelect(option.status) }
+                        .padding(horizontal = 14.dp),
+                ) {
+                    option.dotColor?.let { dot ->
+                        Box(
+                            Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(dot),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = option.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
             }
         }
     }
