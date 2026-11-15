@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:MainTabs.kt$@Composable fun MainTabs( onOpenInvoice: (Int) -&gt; Unit, onOpenPreferences: () -&gt; Unit, onOpenPrivacy: () -&gt; Unit, viewModelStoreOwner: ViewModelStoreOwner, modifier: Modifier = Modifier, tabNavController: NavHostController = rememberNavController(), )</ID>
+    <ID>LongMethod:SgpApp.kt$@Composable fun SgpApp( viewModel: MainViewModel = hiltViewModel(), navController: NavHostController = rememberNavController(), )</ID>
+    <ID>MagicNumber:DemoModeInterceptor.kt$DemoModeInterceptor$200</ID>
+    <ID>MagicNumber:DemoModeInterceptor.kt$DemoModeInterceptor$404</ID>
+    <ID>MagicNumber:MainTabs.kt$140</ID>
+    <ID>MagicNumber:MainTabs.kt$200</ID>
+    <ID>MagicNumber:SgpApp.kt$12</ID>
+    <ID>MagicNumber:SgpApp.kt$160</ID>
+    <ID>MagicNumber:SgpApp.kt$220</ID>
+    <ID>MagicNumber:SgpApp.kt$240</ID>
+    <ID>MagicNumber:SgpApp.kt$280</ID>
+    <ID>MatchingDeclarationName:SgpApp.kt$Routes</ID>
+    <ID>ReturnCount:DemoModeInterceptor.kt$DemoModeInterceptor$override fun intercept(chain: Interceptor.Chain): Response</ID>
+  </CurrentIssues>
+</SmellBaseline>

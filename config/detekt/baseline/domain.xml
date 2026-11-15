@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:Invoice.kt$InvoiceStatus.CANCELLED$3</ID>
+    <ID>ReturnCount:LoginUseCase.kt$LoginUseCase$suspend operator fun invoke(login: String, password: String): AppResult&lt;CustomerSession&gt;</ID>
+    <ID>UnusedPrivateProperty:GetOpenInvoicesUseCaseTest.kt$GetOpenInvoicesUseCaseTest$private val fixedToday = LocalDate.of(2026, 2, 20)</ID>
+  </CurrentIssues>
+</SmellBaseline>

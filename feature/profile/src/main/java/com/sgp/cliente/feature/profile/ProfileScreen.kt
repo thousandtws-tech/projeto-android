@@ -35,12 +35,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DocumentFormatter
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
+import com.sgp.cliente.domain.model.Contract
+import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
 
 private val OptionCardShape = RoundedCornerShape(28.dp)
@@ -62,66 +66,14 @@ fun ProfileScreen(
         modifier = modifier,
     ) { padding ->
         SgpContentFrame(Modifier.fillMaxSize().padding(padding)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(Spacing.lg),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        Text(
-                            text = "Do seu jeito.",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "Seus dados e preferências, sempre à mão.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    uiState.session?.let { TitularCard(it) }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        ProfileOption(
-                            icon = Icons.Filled.Person,
-                            title = "Dados pessoais",
-                            subtitle = "Seus contatos e informações.",
-                            onClick = { showPersonalData = true },
-                        )
-                        ProfileOption(
-                            icon = Icons.Filled.Tune,
-                            title = "Preferências",
-                            subtitle = "Avisos e conexão com o provedor.",
-                            onClick = onOpenPreferences,
-                        )
-                        ProfileOption(
-                            icon = Icons.Filled.Shield,
-                            title = "Privacidade",
-                            subtitle = "Seus dados e seus direitos.",
-                            onClick = onOpenPrivacy,
-                        )
-                    }
-                }
-
-                TextButton(
-                    onClick = viewModel::logout,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp),
-                ) {
-                    Text(
-                        text = "Sair da conta",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
+            ProfileContent(
+                session = uiState.session,
+                onShowPersonalData = { showPersonalData = true },
+                onOpenPreferences = onOpenPreferences,
+                onOpenPrivacy = onOpenPrivacy,
+                onLogout = viewModel::logout,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 
@@ -130,6 +82,77 @@ fun ProfileScreen(
             session = uiState.session,
             onDismiss = { showPersonalData = false },
         )
+    }
+}
+
+@Composable
+internal fun ProfileContent(
+    session: CustomerSession?,
+    onShowPersonalData: () -> Unit,
+    onOpenPreferences: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(Spacing.lg),
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    text = "Do seu jeito.",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Seus dados e preferências, sempre à mão.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            session?.let { TitularCard(it) }
+
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                ProfileOption(
+                    icon = Icons.Filled.Person,
+                    title = "Dados pessoais",
+                    subtitle = "Seus contatos e informações.",
+                    onClick = onShowPersonalData,
+                )
+                ProfileOption(
+                    icon = Icons.Filled.Tune,
+                    title = "Preferências",
+                    subtitle = "Avisos e conexão com o provedor.",
+                    onClick = onOpenPreferences,
+                )
+                ProfileOption(
+                    icon = Icons.Filled.Shield,
+                    title = "Privacidade",
+                    subtitle = "Seus dados e seus direitos.",
+                    onClick = onOpenPrivacy,
+                )
+            }
+        }
+
+        TextButton(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp),
+        ) {
+            Text(
+                text = "Sair da conta",
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
     }
 }
 
@@ -234,6 +257,7 @@ private fun PersonalDataSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg)
                 .padding(bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -266,6 +290,39 @@ private fun PersonalDataRow(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+private val previewSession = CustomerSession(
+    credentials = Credentials(login = "maria@exemplo.com", password = ""),
+    customerName = "Maria Souza",
+    cpfCnpj = "12345678900",
+    contracts = listOf(
+        Contract(
+            id = 1001,
+            status = "Ativo",
+            razaoSocial = "Maria Souza",
+            cpfCnpj = "12345678900",
+            dueDay = 10,
+            internetPlan = "Fibra 300 Mega",
+            internetPlanValue = 99.90,
+            internetPlanId = null,
+        ),
+    ),
+    selectedContractId = 1001,
+)
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 915)
+@Composable
+private fun ProfileContentPreview() {
+    SgpTheme {
+        ProfileContent(
+            session = previewSession,
+            onShowPersonalData = {},
+            onOpenPreferences = {},
+            onOpenPrivacy = {},
+            onLogout = {},
         )
     }
 }

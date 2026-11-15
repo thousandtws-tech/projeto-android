@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$10</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$11</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$12</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$13</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$3</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$4</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$5</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$6</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$7</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$8</ID>
+    <ID>MagicNumber:CpfCnpjValidator.kt$CpfCnpjValidator$9</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$11</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$12</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$14</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$3</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$5</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$6</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$8</ID>
+    <ID>MagicNumber:Formatters.kt$DocumentFormatter$9</ID>
+    <ID>MaxLineLength:Formatters.kt$DocumentFormatter$14 -&gt; "${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8, 12)}-${digits.substring(12)}"</ID>
+    <ID>MayBeConst:CpfCnpjValidator.kt$CpfCnpjValidator$private val CNPJ_LENGTH = 14</ID>
+    <ID>MayBeConst:CpfCnpjValidator.kt$CpfCnpjValidator$private val CPF_LENGTH = 11</ID>
+  </CurrentIssues>
+</SmellBaseline>

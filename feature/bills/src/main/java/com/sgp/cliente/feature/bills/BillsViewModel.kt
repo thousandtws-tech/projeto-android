@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.format.DateFormatter
+import com.sgp.cliente.core.common.logging.AppLog
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
@@ -100,6 +101,7 @@ class BillsViewModel @Inject constructor(
                 }
             },
             onFailure = { error ->
+                AppLog.w(TAG, "invoice fetch failed offset=$offset: ${error::class.simpleName}")
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -110,5 +112,9 @@ class BillsViewModel @Inject constructor(
                 }
             },
         )
+    }
+
+    private companion object {
+        const val TAG = "feature.bills"
     }
 }

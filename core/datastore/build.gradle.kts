@@ -17,6 +17,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        // Every class in this module is bound to Context/DataStore/Android
+        // Keystore — nothing is unit-testable on the JVM today, so an empty
+        // test source set must not fail the task.
+        unitTests.all {
+            it.failOnNoDiscoveredTests.set(false)
+        }
+    }
 }
 
 dependencies {

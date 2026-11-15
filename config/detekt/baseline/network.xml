@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:SafeApiCall.kt$300</ID>
+    <ID>MagicNumber:SafeApiCall.kt$400</ID>
+    <ID>MagicNumber:SafeApiCall.kt$401</ID>
+    <ID>MagicNumber:SafeApiCall.kt$403</ID>
+    <ID>MagicNumber:SafeApiCall.kt$404</ID>
+    <ID>MagicNumber:SafeApiCall.kt$422</ID>
+    <ID>MagicNumber:SafeApiCall.kt$500</ID>
+    <ID>MagicNumber:SafeApiCall.kt$599</ID>
+    <ID>MagicNumber:SanitizedLoggingInterceptor.kt$SanitizedLoggingInterceptor$1_000_000</ID>
+    <ID>ReturnCount:ConnectivityObserver.kt$ConnectivityObserver$private fun currentStatus(): Boolean</ID>
+    <ID>SwallowedException:SafeApiCall.kt$e: IllegalArgumentException</ID>
+    <ID>SwallowedException:SafeApiCall.kt$e: SerializationException</ID>
+    <ID>SwallowedException:SafeApiCall.kt$e: SocketTimeoutException</ID>
+    <ID>SwallowedException:SafeApiCall.kt$e: UnknownHostException</ID>
+    <ID>SwallowedException:SafeApiCall.kt$e: java.io.IOException</ID>
+    <ID>TooGenericExceptionCaught:SafeApiCall.kt$e: Throwable</ID>
+  </CurrentIssues>
+</SmellBaseline>

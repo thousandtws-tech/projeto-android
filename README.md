@@ -40,7 +40,8 @@ Detalhes em [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Como compilar
 
-Pré-requisitos: JDK 25, Android SDK 37 (`sdk.dir` em `local.properties`).
+Pré-requisitos: JDK 21 (Temurin; JDK 25+ quebra o detekt — ver CONTRIBUTING.md),
+Android SDK 37 (`sdk.dir` em `local.properties`).
 
 ```bash
 # APK de desenvolvimento
@@ -51,6 +52,9 @@ Pré-requisitos: JDK 25, Android SDK 37 (`sdk.dir` em `local.properties`).
 
 # Lint
 ./gradlew :app:lintDevDebug
+
+# Qualidade (ktlint + detekt + cobertura Kover agregada)
+./gradlew ktlintCheck detekt koverHtmlReport
 ```
 
 Saída: `app/build/outputs/apk/dev/debug/app-dev-debug.apk`

@@ -16,8 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.sgp.cliente.core.common.error.AppError
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
 /** Maps typed errors to user-facing pt-BR messages. */
@@ -120,5 +122,24 @@ fun SgpEmptyState(
                 modifier = Modifier.padding(top = Spacing.xs),
             )
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 400)
+@Composable
+private fun SgpEmptyStatePreview() {
+    SgpTheme {
+        SgpEmptyState(
+            title = "Nenhuma fatura",
+            message = "Não há faturas para o filtro selecionado.",
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 400)
+@Composable
+private fun SgpErrorViewPreview() {
+    SgpTheme {
+        SgpErrorView(error = AppError.NetworkUnavailable, onRetry = {})
     }
 }

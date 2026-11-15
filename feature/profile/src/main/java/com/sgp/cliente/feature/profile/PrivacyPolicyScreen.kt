@@ -19,7 +19,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
 private data class PolicySection(val title: String, val body: String)
@@ -153,5 +155,13 @@ fun PrivacyPolicyScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 915)
+@Composable
+private fun PrivacyPolicyScreenPreview() {
+    SgpTheme {
+        PrivacyPolicyScreen(onBack = {})
     }
 }

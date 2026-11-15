@@ -11,6 +11,8 @@ android {
 
     defaultConfig {
         minSdk = 24
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -45,9 +47,17 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.junit)
+    // ui-test pulls espresso-core transitively; < 3.7.0 eagerly reflects
+    // InputManager.getInstance (removed on Android 16+/API 36+), which makes
+    // every Espresso.onIdle() call throw during compose test idling.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

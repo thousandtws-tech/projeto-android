@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:ServerConfigScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ServerConfigScreen( onBack: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: ServerConfigViewModel = hiltViewModel(), )</ID>
+    <ID>UnusedPrivateMember:PreferencesScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915) @Composable private fun PreferencesContentPreview()</ID>
+    <ID>UnusedPrivateMember:PrivacyPolicyScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915) @Composable private fun PrivacyPolicyScreenPreview()</ID>
+    <ID>UnusedPrivateMember:ProfileScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915) @Composable private fun ProfileContentPreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

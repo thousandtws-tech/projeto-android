@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Root view model: exposes the session state used to pick the navigation
@@ -38,6 +39,13 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // Transitions only — never session contents (no names, CPF, tokens).
+            // StateFlow already conflates equal emissions.
+            sessionState.collect { state ->
+                Timber.tag(SESSION_TAG).i("session -> %s", state.logName)
+            }
+        }
+        viewModelScope.launch {
             settingsRepository.baseUrlOverride.collect { override ->
                 baseUrlProvider.update(override ?: EnvConfig.DEFAULT_BASE_URL)
             }
@@ -60,9 +68,22 @@ class MainViewModel @Inject constructor(
                 if (effectiveUrl.isNotBlank()) {
                     runCatching {
                         authRepository.discoverAndSelectCentral(effectiveUrl)
+                    }.onFailure { cause ->
+                        Timber.tag(SESSION_TAG).w(cause, "central discovery failed")
                     }
                 }
             }
         }
+    }
+
+    private val SessionState.logName: String
+        get() = when (this) {
+            SessionState.Loading -> "Loading"
+            is SessionState.LoggedIn -> "LoggedIn"
+            SessionState.LoggedOut -> "LoggedOut"
+        }
+
+    private companion object {
+        const val SESSION_TAG = "app.session"
     }
 }

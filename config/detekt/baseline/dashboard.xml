@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>UnusedPrivateMember:DashboardScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915) @Composable private fun DashboardContentCompactPreview()</ID>
+    <ID>UnusedPrivateMember:DashboardScreen.kt$@Preview(showBackground = true, widthDp = 900, heightDp = 700) @Composable private fun DashboardContentGridPreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

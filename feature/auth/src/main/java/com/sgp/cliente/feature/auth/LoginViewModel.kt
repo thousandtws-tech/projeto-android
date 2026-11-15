@@ -3,6 +3,7 @@ package com.sgp.cliente.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sgp.cliente.core.common.error.AppError
+import com.sgp.cliente.core.common.logging.AppLog
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.usecase.auth.LoginUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -64,12 +65,19 @@ class LoginViewModel @Inject constructor(
                 onSuccess = {
                     // Navigation is driven by the session observer in SgpApp —
                     // no one-shot event needed here.
+                    AppLog.i(TAG, "login succeeded")
                     _uiState.update { s -> s.copy(loading = false) }
                 },
                 onFailure = { error ->
+                    // Typed error only — never credentials.
+                    AppLog.w(TAG, "login failed: ${error::class.simpleName}")
                     _uiState.update { it.copy(loading = false, formError = error) }
                 },
             )
         }
+    }
+
+    private companion object {
+        const val TAG = "feature.auth"
     }
 }

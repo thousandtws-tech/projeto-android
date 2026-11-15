@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:BillDetailsScreen.kt$@Composable private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsViewModel)</ID>
+  </CurrentIssues>
+</SmellBaseline>

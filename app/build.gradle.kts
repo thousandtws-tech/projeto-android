@@ -1,10 +1,36 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.androidx.baselineprofile)
+    // Classpath only (`apply false`): applied below, conditionally, so a
+    // checkout without google-services.json still configures and builds.
+    alias(libs.plugins.gms) apply false
+    alias(libs.plugins.firebase.crashlytics.plugin) apply false
 }
+
+// Firebase/Crashlytics opt-in: drop google-services.json into app/ (gitignored)
+// to enable the plugins and dependencies. Without the file the build stays
+// green with no Firebase on the classpath.
+val hasGoogleServices = file("google-services.json").exists()
+if (hasGoogleServices) {
+    apply(plugin = libs.plugins.gms.get().pluginId)
+    apply(plugin = libs.plugins.firebase.crashlytics.plugin.get().pluginId)
+}
+
+// Optional release signing: credentials live in root keystore.properties
+// (gitignored — see keystore.properties.template). Missing file = unsigned
+// release build, which keeps CI and dev machines working.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { load(it) }
+        }
+    }
 
 android {
     namespace = "com.sgp.cliente"
@@ -27,11 +53,25 @@ android {
         create("prod") { dimension = "env" }
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**", "com.sgp.**")
+            }
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -42,6 +82,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -106,6 +147,12 @@ dependencies {
 
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
+
+    implementation(libs.timber)
+    if (hasGoogleServices) {
+        implementation(platform(libs.firebase.bom))
+        implementation(libs.firebase.crashlytics)
+    }
 
     // Dev flavor only: offline demo interceptor (okhttp types on classpath).
     "devImplementation"(libs.okhttp)

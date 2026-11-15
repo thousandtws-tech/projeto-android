@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:AltchaSolver.kt$AltchaSolver$0xFFFF</ID>
+    <ID>MagicNumber:AltchaSolver.kt$AltchaSolver$16</ID>
+    <ID>MagicNumber:AltchaSolver.kt$AltchaSolver$4</ID>
+    <ID>MagicNumber:CentralAppMappers.kt$3</ID>
+    <ID>MagicNumber:RepositoriesImpl.kt$InvoiceRepositoryImpl$3</ID>
+    <ID>ReturnCount:RepositoriesImpl.kt$InvoiceRepositoryImpl$override suspend fun getInvoices( contractId: Int, statusFilter: Int?, offset: Int, limit: Int, forceRefresh: Boolean, ): AppResult&lt;PagedResult&lt;Invoice&gt;&gt;</ID>
+    <ID>TooManyFunctions:CentralAppRemoteDataSource.kt$CentralAppRemoteDataSource</ID>
+    <ID>UnusedPrivateProperty:InvoiceRepositoryImplTest.kt$InvoiceRepositoryImplTest$val first = repository.getInvoices(101, statusFilter = 1)</ID>
+  </CurrentIssues>
+</SmellBaseline>

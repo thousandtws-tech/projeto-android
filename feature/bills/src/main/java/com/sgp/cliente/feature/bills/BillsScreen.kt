@@ -8,7 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -25,11 +35,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
 import com.sgp.cliente.core.common.format.MoneyFormatter
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
+import com.sgp.cliente.core.designsystem.adaptive.currentWindowWidthSizeClass
 import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
 import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpEmptyState
@@ -37,6 +49,8 @@ import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceCard
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceList
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
+import com.sgp.cliente.core.designsystem.theme.LayoutTokens
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
@@ -51,12 +65,21 @@ fun BillsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
 
     val shouldLoadMore by remember {
         derivedStateOf {
-            val info = listState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 3
+            // Only one container is composed at a time (list on Compact,
+            // grid otherwise) — the idle one reports zero items, so
+            // checking both is safe.
+            val listInfo = listState.layoutInfo
+            val gridInfo = gridState.layoutInfo
+            val totalItems = listInfo.totalItemsCount + gridInfo.totalItemsCount
+            val lastVisible = maxOf(
+                listInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
+                gridInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
+            )
+            totalItems > 0 && lastVisible >= totalItems - 3
         }
     }
     LaunchedEffect(shouldLoadMore) {
@@ -87,7 +110,7 @@ fun BillsScreen(
                                 message = "Não há faturas para o filtro selecionado.",
                                 modifier = Modifier.fillMaxSize(),
                             )
-                        else -> InvoiceList(uiState, listState, onOpenInvoice)
+                        else -> InvoiceList(uiState, listState, gridState, onOpenInvoice)
                     }
                 }
             }
@@ -121,39 +144,90 @@ private fun StatusFilters(selected: InvoiceStatus?, onSelect: (InvoiceStatus?) -
 @Composable
 private fun InvoiceList(
     uiState: BillsUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
+    gridState: LazyGridState,
     onOpenInvoice: (Int) -> Unit,
 ) {
     val today = remember { LocalDate.now() }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        uiState.grouped.forEach { (competence, invoices) ->
-            item(key = "header_$competence") {
-                Text(
-                    text = competence,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Spacing.xs),
-                )
-            }
-            items(invoices, key = { it.id }) { invoice ->
-                InvoiceRow(
-                    invoice = invoice,
-                    today = today,
-                    onClick = { onOpenInvoice(invoice.id) },
-                )
-            }
+    if (currentWindowWidthSizeClass() == WindowWidthSizeClass.Compact) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            billItems(uiState, today, onOpenInvoice)
         }
-        if (uiState.loadingMore) {
-            item(key = "loading_more") {
-                SgpSkeletonInvoiceCard()
-            }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(LayoutTokens.gridItemMinWidth),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            billItems(uiState, today, onOpenInvoice)
         }
     }
+}
+
+private fun LazyListScope.billItems(
+    uiState: BillsUiState,
+    today: LocalDate,
+    onOpenInvoice: (Int) -> Unit,
+) {
+    uiState.grouped.forEach { (competence, invoices) ->
+        item(key = "header_$competence") {
+            CompetenceHeader(competence)
+        }
+        items(invoices, key = { it.id }) { invoice ->
+            InvoiceRow(
+                invoice = invoice,
+                today = today,
+                onClick = { onOpenInvoice(invoice.id) },
+            )
+        }
+    }
+    if (uiState.loadingMore) {
+        item(key = "loading_more") {
+            SgpSkeletonInvoiceCard()
+        }
+    }
+}
+
+private fun LazyGridScope.billItems(
+    uiState: BillsUiState,
+    today: LocalDate,
+    onOpenInvoice: (Int) -> Unit,
+) {
+    uiState.grouped.forEach { (competence, invoices) ->
+        item(key = "header_$competence", span = { GridItemSpan(maxLineSpan) }) {
+            CompetenceHeader(competence)
+        }
+        items(invoices, key = { it.id }) { invoice ->
+            InvoiceRow(
+                invoice = invoice,
+                today = today,
+                onClick = { onOpenInvoice(invoice.id) },
+            )
+        }
+    }
+    if (uiState.loadingMore) {
+        item(key = "loading_more", span = { GridItemSpan(maxLineSpan) }) {
+            SgpSkeletonInvoiceCard()
+        }
+    }
+}
+
+@Composable
+private fun CompetenceHeader(competence: String) {
+    Text(
+        text = competence,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = Spacing.xs),
+    )
 }
 
 @Composable
@@ -191,5 +265,61 @@ private fun InvoiceRow(invoice: Invoice, today: LocalDate, onClick: () -> Unit) 
                 },
             )
         }
+    }
+}
+
+private fun previewInvoice(
+    id: Int,
+    status: InvoiceStatus,
+    dueDate: LocalDate,
+) = Invoice(
+    id = id,
+    documentNumber = 100000L + id,
+    statusId = status.apiId,
+    statusLabel = "",
+    dueDate = dueDate,
+    effectiveDueDate = null,
+    amount = 99.90 + id,
+    correctedAmount = null,
+    paidAt = if (status == InvoiceStatus.PAID) dueDate else null,
+    barcode = null,
+    pixCode = null,
+    canGeneratePix = false,
+    boletoPath = null,
+)
+
+private val previewUiState = BillsUiState(
+    loading = false,
+    invoices = listOf(
+        previewInvoice(1, InvoiceStatus.OPEN, LocalDate.now().plusDays(5)),
+        previewInvoice(2, InvoiceStatus.OPEN, LocalDate.now().minusDays(2)),
+        previewInvoice(3, InvoiceStatus.PAID, LocalDate.now().minusMonths(1)),
+        previewInvoice(4, InvoiceStatus.CANCELLED, LocalDate.now().minusMonths(1).minusDays(3)),
+    ),
+)
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 915)
+@Composable
+private fun InvoiceListCompactPreview() {
+    SgpTheme {
+        InvoiceList(
+            uiState = previewUiState,
+            listState = rememberLazyListState(),
+            gridState = rememberLazyGridState(),
+            onOpenInvoice = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 900, heightDp = 700)
+@Composable
+private fun InvoiceListGridPreview() {
+    SgpTheme {
+        InvoiceList(
+            uiState = previewUiState,
+            listState = rememberLazyListState(),
+            gridState = rememberLazyGridState(),
+            onOpenInvoice = {},
+        )
     }
 }

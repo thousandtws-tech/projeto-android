@@ -1,7 +1,9 @@
 package com.sgp.cliente.core.designsystem.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -13,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 import com.sgp.cliente.core.designsystem.theme.StatusCancelled
 import com.sgp.cliente.core.designsystem.theme.StatusCancelledContainer
@@ -87,3 +91,42 @@ fun SgpStatusBadge(
 }
 
 enum class SgpBadgeKind { PAID, OPEN, OVERDUE, NEUTRAL }
+
+@Preview(showBackground = true, widthDp = 412)
+@Composable
+private fun SgpCardPreview() {
+    SgpTheme {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SgpCard {
+                Text("Card estático", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Conteúdo de exemplo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            SgpCard(onClick = {}) {
+                Text("Card clicável", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SgpStatusBadgePreview() {
+    SgpTheme {
+        Row(
+            modifier = Modifier.padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            SgpStatusBadge(text = "Paga", kind = SgpBadgeKind.PAID)
+            SgpStatusBadge(text = "Em aberto", kind = SgpBadgeKind.OPEN)
+            SgpStatusBadge(text = "Vencida", kind = SgpBadgeKind.OVERDUE)
+            SgpStatusBadge(text = "Cancelada", kind = SgpBadgeKind.NEUTRAL)
+        }
+    }
+}

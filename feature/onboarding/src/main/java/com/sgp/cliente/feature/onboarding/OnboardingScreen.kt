@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -67,6 +68,15 @@ private val pages = listOf(
     ),
 )
 
+/** Tags used by Compose UI tests to locate onboarding elements. */
+internal object OnboardingTestTags {
+    const val Pager = "onboarding_pager"
+    const val Dots = "onboarding_dots"
+    const val SkipButton = "onboarding_skip_button"
+    const val CtaButton = "onboarding_cta_button"
+    const val SubscriberButton = "onboarding_subscriber_button"
+}
+
 /**
  * First-run onboarding (3 swipeable pages) matching the Figma
  * "Onboarding / Conexão · Pagamentos · Atendimento" flow.
@@ -78,13 +88,30 @@ fun OnboardingScreen(
     onFinish: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
-    val pagerState = rememberPagerState(pageCount = { pages.size })
-    val scope = rememberCoroutineScope()
+    OnboardingContent(
+        brandName = brandName,
+        onFinish = {
+            viewModel.complete()
+            onFinish()
+        },
+    )
+}
 
-    fun finish() {
-        viewModel.complete()
-        onFinish()
-    }
+/**
+ * Stateless onboarding UI; [OnboardingScreen] wires the finish action to
+ * [OnboardingViewModel.complete]. [initialPage] exists for previews/tests.
+ */
+@Composable
+internal fun OnboardingContent(
+    brandName: String,
+    onFinish: () -> Unit,
+    initialPage: Int = 0,
+) {
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { pages.size },
+    )
+    val scope = rememberCoroutineScope()
 
     SgpContentFrame {
         Column(
@@ -108,12 +135,18 @@ fun OnboardingScreen(
                     modifier = Modifier.padding(start = 24.dp),
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                SgpTextButton(text = "Pular", onClick = ::finish)
+                SgpTextButton(
+                    text = "Pular",
+                    onClick = onFinish,
+                    modifier = Modifier.testTag(OnboardingTestTags.SkipButton),
+                )
             }
 
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(OnboardingTestTags.Pager),
             ) { page ->
                 OnboardingPageContent(
                     page = pages[page],
@@ -138,12 +171,13 @@ fun OnboardingScreen(
                                 pagerState.animateScrollToPage(pagerState.currentPage + 1)
                             }
                         } else {
-                            finish()
+                            onFinish()
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(52.dp)
+                        .testTag(OnboardingTestTags.CtaButton),
                     shape = CircleShape,
                 ) {
                     Text(
@@ -156,10 +190,11 @@ fun OnboardingScreen(
                 }
                 SgpTextButton(
                     text = "Já sou assinante",
-                    onClick = ::finish,
+                    onClick = onFinish,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(52.dp)
+                        .testTag(OnboardingTestTags.SubscriberButton),
                 )
             }
         }
@@ -223,7 +258,8 @@ private fun OnboardingDots(count: Int, current: Int) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .height(8.dp)
-            .semantics { contentDescription = "Passo ${current + 1} de $count" },
+            .semantics { contentDescription = "Passo ${current + 1} de $count" }
+            .testTag(OnboardingTestTags.Dots),
     ) {
         repeat(count) { index ->
             Box(
@@ -244,10 +280,26 @@ private fun OnboardingDots(count: Int, current: Int) {
     }
 }
 
-@Preview(showBackground = true, widthDp = 412, heightDp = 915)
+@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 1")
 @Composable
-private fun OnboardingPreview() {
+private fun OnboardingFirstPagePreview() {
     SgpTheme {
-        OnboardingScreen(brandName = "SGP Cliente", onFinish = {})
+        OnboardingContent(brandName = "SGP Cliente", onFinish = {})
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 2")
+@Composable
+private fun OnboardingSecondPagePreview() {
+    SgpTheme {
+        OnboardingContent(brandName = "SGP Cliente", onFinish = {}, initialPage = 1)
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 3")
+@Composable
+private fun OnboardingLastPagePreview() {
+    SgpTheme {
+        OnboardingContent(brandName = "SGP Cliente", onFinish = {}, initialPage = 2)
     }
 }

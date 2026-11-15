@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:OnboardingScreen.kt$@Composable internal fun OnboardingContent( brandName: String, onFinish: () -&gt; Unit, initialPage: Int = 0, )</ID>
+    <ID>UnusedPrivateMember:OnboardingScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 1") @Composable private fun OnboardingFirstPagePreview()</ID>
+    <ID>UnusedPrivateMember:OnboardingScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 2") @Composable private fun OnboardingSecondPagePreview()</ID>
+    <ID>UnusedPrivateMember:OnboardingScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915, name = "Onboarding — Página 3") @Composable private fun OnboardingLastPagePreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

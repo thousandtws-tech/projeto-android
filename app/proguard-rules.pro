@@ -6,3 +6,12 @@
 -keepclassmembers @kotlinx.serialization.Serializable class ** {
     <fields>;
 }
+
+# Timber: release trees already drop < WARN — remove those call sites
+# entirely so verbose/debug logging costs nothing in release builds.
+-assumenosideeffects class timber.log.Timber* {
+    public *** tag(...);
+    public *** v(...);
+    public *** d(...);
+    public *** i(...);
+}

@@ -11,17 +11,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 25
+      # JDK 21 LTS: detekt 1.23.x runs its Kotlin frontend in the Gradle JVM and
+      # fails on JDK 24+/4-segment versions (e.g. Microsoft OpenJDK "25.0.4.1").
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Code quality — ktlint + detekt
+        run: ./gradlew --no-daemon ktlintCheck detekt
 
       - name: Unit tests
         run: >-
@@ -33,11 +38,28 @@ jobs:
           :feature:billdetails:testDebugUnitTest
           :feature:contracts:testDebugUnitTest
           :feature:dashboard:testDebugUnitTest
+          :feature:onboarding:testDebugUnitTest
           :feature:paymentpromises:testDebugUnitTest
           :feature:profile:testDebugUnitTest
 
+      - name: Coverage report (Kover)
+        run: ./gradlew --no-daemon koverXmlReport koverHtmlReport
+
       - name: Lint
-        run: ./gradlew --no-daemon :app:lintDevDebug
+        run: >-
+          ./gradlew --no-daemon
+          :app:lintDevDebug
+          :feature:auth:lintDebug
+          :feature:bills:lintDebug
+          :feature:billdetails:lintDebug
+          :feature:contracts:lintDebug
+          :feature:dashboard:lintDebug
+          :feature:onboarding:lintDebug
+          :feature:paymentpromises:lintDebug
+          :feature:profile:lintDebug
+
+      - name: Assemble dev release APK (R8/ProGuard validation)
+        run: ./gradlew --no-daemon :app:assembleDevRelease
 
       - name: Assemble dev debug APK
         run: ./gradlew --no-daemon :app:assembleDevDebug
@@ -47,4 +69,11 @@ jobs:
         with:
           name: app-dev-debug
           path: app/build/outputs/apk/dev/debug/*.apk
+          retention-days: 14
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: kover-html-report
+          path: build/reports/kover/**
           retention-days: 14

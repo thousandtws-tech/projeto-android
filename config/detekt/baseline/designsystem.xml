@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:SgpFloatingNavBar.kt$@Composable fun SgpFloatingNavBar( items: List&lt;SgpFloatingNavItem&gt;, selectedIndex: Int, onItemSelected: (Int) -&gt; Unit, modifier: Modifier = Modifier, containerColor: Color = MaterialTheme.colorScheme.surface, contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant, selectedContentColor: Color = MaterialTheme.colorScheme.onSurface, )</ID>
+    <ID>LongParameterList:SgpFloatingNavBar.kt$( width: Float, height: Float, cornerRadius: Float, notchCenter: Float, notchDepth: Float, notchShoulderY: Float, notchShoulderC2Y: Float, notchBottomC2Y: Float, density: Density, )</ID>
+    <ID>MagicNumber:Adaptive.kt$3</ID>
+    <ID>MagicNumber:SgpFloatingNavBar.kt$0.5f</ID>
+    <ID>MagicNumber:SgpSkeleton.kt$5</ID>
+    <ID>MagicNumber:SgpSkeleton.kt$50</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$11</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$12</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$3</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$4</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$5</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$6</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$7</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$8</ID>
+    <ID>MagicNumber:SgpTextFields.kt$CpfCnpjVisualTransformation$9</ID>
+    <ID>MatchingDeclarationName:SgpFloatingNavBar.kt$SgpFloatingNavItem</ID>
+    <ID>UnusedPrivateMember:SgpButtons.kt$@Preview(showBackground = true, widthDp = 412) @Composable private fun SgpButtonsPreview()</ID>
+    <ID>UnusedPrivateMember:SgpCards.kt$@Preview(showBackground = true) @Composable private fun SgpStatusBadgePreview()</ID>
+    <ID>UnusedPrivateMember:SgpCards.kt$@Preview(showBackground = true, widthDp = 412) @Composable private fun SgpCardPreview()</ID>
+    <ID>UnusedPrivateMember:SgpFeedback.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 400) @Composable private fun SgpEmptyStatePreview()</ID>
+    <ID>UnusedPrivateMember:SgpFeedback.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 400) @Composable private fun SgpErrorViewPreview()</ID>
+    <ID>UnusedPrivateMember:SgpSkeleton.kt$@Preview(showBackground = true, widthDp = 412) @Composable private fun SgpSkeletonInvoiceCardPreview()</ID>
+    <ID>UnusedPrivateMember:SgpSkeleton.kt$@Preview(showBackground = true, widthDp = 412) @Composable private fun SgpSkeletonRowsPreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

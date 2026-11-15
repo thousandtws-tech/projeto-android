@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:LoginScreen.kt$@Composable internal fun LoginContent( uiState: LoginUiState, onLoginChange: (String) -&gt; Unit, onPasswordChange: (String) -&gt; Unit, onSubmit: () -&gt; Unit, onConfigureServer: () -&gt; Unit, onOpenPrivacy: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>MatchingDeclarationName:LoginScreen.kt$LoginTestTags</ID>
+    <ID>UnusedPrivateMember:LoginScreen.kt$@Preview(showBackground = true, name = "Login — Carregando") @Composable private fun LoginContentLoadingPreview()</ID>
+    <ID>UnusedPrivateMember:LoginScreen.kt$@Preview(showBackground = true, name = "Login — Erro") @Composable private fun LoginContentErrorPreview()</ID>
+    <ID>UnusedPrivateMember:LoginScreen.kt$@Preview(showBackground = true, name = "Login — Preenchido") @Composable private fun LoginContentFilledPreview()</ID>
+    <ID>UnusedPrivateMember:LoginScreen.kt$@Preview(showBackground = true, name = "Login — Vazio") @Composable private fun LoginContentEmptyPreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:BillsScreen.kt$3</ID>
+    <ID>UnusedPrivateMember:BillsScreen.kt$@Preview(showBackground = true, widthDp = 412, heightDp = 915) @Composable private fun InvoiceListCompactPreview()</ID>
+    <ID>UnusedPrivateMember:BillsScreen.kt$@Preview(showBackground = true, widthDp = 900, heightDp = 700) @Composable private fun InvoiceListGridPreview()</ID>
+  </CurrentIssues>
+</SmellBaseline>

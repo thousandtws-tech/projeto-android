@@ -2,6 +2,7 @@ package com.sgp.cliente.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sgp.cliente.core.common.logging.AppLog
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.SessionState
 import com.sgp.cliente.domain.usecase.auth.LogoutUseCase
@@ -40,8 +41,13 @@ class ProfileViewModel @Inject constructor(
     // SgpApp. Emitting to a SharedFlow here used to suspend on the main
     // thread while the store was being torn down, starving the event loop.
     fun logout() {
+        AppLog.i(TAG, "logout requested")
         viewModelScope.launch {
             logoutUseCase()
         }
+    }
+
+    private companion object {
+        const val TAG = "feature.profile"
     }
 }

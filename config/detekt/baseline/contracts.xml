@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:ContractsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ContractsScreen( onContractSelected: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: ContractsViewModel = hiltViewModel(), )</ID>
+  </CurrentIssues>
+</SmellBaseline>

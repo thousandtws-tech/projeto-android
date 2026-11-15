@@ -1,0 +1,87 @@
+# detekt configuration — merged on top of detekt's bundled defaults
+# (buildUponDefaultConfig = true in the root build.gradle.kts), so only
+# overrides live here.
+# Reference: https://detekt.dev/docs/introduction/configurations/
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+  exclude:
+    - '**/build/**'
+    - '**/generated/**'
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    # Compose screens legitimately run longer than the 40-line default.
+    threshold: 60
+  LongParameterList:
+    active: true
+    # Composables take many parameters by design.
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/build/**', '**/generated/**']
+    thresholdInFiles: 15
+    thresholdInClasses: 15
+    thresholdInInterfaces: 15
+    thresholdInObjects: 15
+    thresholdInEnums: 15
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+    ignoreSingleWhenExpression: true
+    ignoreSimpleWhenEntries: true
+  NestedBlockDepth:
+    active: true
+    # Composable lambdas add nesting; 5 keeps the signal without noise.
+    threshold: 5
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/build/**', '**/generated/**']
+    # PascalCase is allowed so @Composable factories read like constructors.
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ignoreAnnotated: ['Composable']
+  ClassNaming:
+    active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/build/**', '**/generated/**']
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    # Theme tokens are literally numbers; tests assert on literals.
+    excludes: ['**/test/**', '**/androidTest/**', '**/theme/**', '**/build/**', '**/generated/**']
+    ignoreNumbers: ['-1', '0', '1', '2']
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: false
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: false
+    ignoreNamedArgument: true
+    ignoreEnums: false
+    ignoreRanges: false
+    ignoreExtensionFunctions: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludes: ['**/build/**', '**/generated/**']
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: false
+    excludeRawStrings: true

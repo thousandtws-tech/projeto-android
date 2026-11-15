@@ -29,8 +29,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
 private const val SHIMMER_DURATION_MS = 1100
@@ -202,5 +204,27 @@ private fun SkeletonCard(content: @Composable () -> Unit) {
         ) {
             content()
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412)
+@Composable
+private fun SgpSkeletonInvoiceCardPreview() {
+    SgpTheme {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SgpSkeletonInvoiceCard()
+            SgpSkeletonInvoiceCard()
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 412)
+@Composable
+private fun SgpSkeletonRowsPreview() {
+    SgpTheme {
+        SgpSkeletonRows(rows = 2)
     }
 }
