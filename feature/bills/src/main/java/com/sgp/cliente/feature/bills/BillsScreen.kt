@@ -39,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,6 +47,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -57,6 +60,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +94,7 @@ import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceCard
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceList
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
+import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.LayoutTokens
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
@@ -111,9 +117,30 @@ fun BillsScreen(
     val gridState = rememberLazyGridState()
     val clipboard = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
-    val onCopyValue: (String) -> Unit = { clipboard.setText(AnnotatedString(it)) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val onCopyValue: (String) -> Unit = {
+        clipboard.setText(AnnotatedString(it))
+        scope.launch { snackbar.showSnackbar("Código copiado") }
+    }
     val onOpenBoleto: (Invoice) -> Unit = { invoice ->
         invoice.boletoPath?.let { runCatching { uriHandler.openUri(it) } }
+    }
+
+    // A generated PIX code arrives through state — copy it here, where the
+    // clipboard lives, then consume the one-shot.
+    LaunchedEffect(uiState.pixCodeToCopy) {
+        uiState.pixCodeToCopy?.let {
+            clipboard.setText(AnnotatedString(it))
+            viewModel.consumePixCodeToCopy()
+            snackbar.showSnackbar("Código PIX copiado")
+        }
+    }
+    LaunchedEffect(uiState.actionError) {
+        uiState.actionError?.let {
+            snackbar.showSnackbar(it.toUserMessage())
+            viewModel.consumeActionError()
+        }
     }
 
     val shouldLoadMore by remember {
@@ -137,6 +164,7 @@ fun BillsScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Faturas") }) },
+        snackbarHost = { SnackbarHost(snackbar) },
         modifier = modifier,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -166,6 +194,7 @@ fun BillsScreen(
                             onOpenInvoice,
                             onCopyValue,
                             onOpenBoleto,
+                            viewModel::requestPixCode,
                         )
                     }
                 }
@@ -279,6 +308,7 @@ private fun InvoiceList(
     onOpenInvoice: (Int) -> Unit,
     onCopyValue: (String) -> Unit,
     onOpenBoleto: (Invoice) -> Unit,
+    onPix: (Invoice) -> Unit,
 ) {
     val today = remember { LocalDate.now() }
     if (currentWindowWidthSizeClass() == WindowWidthSizeClass.Compact) {
@@ -288,7 +318,7 @@ private fun InvoiceList(
             contentPadding = PaddingValues(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto)
+            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto, onPix)
         }
     } else {
         LazyVerticalGrid(
@@ -299,7 +329,7 @@ private fun InvoiceList(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto)
+            billItems(uiState, today, onOpenInvoice, onCopyValue, onOpenBoleto, onPix)
         }
     }
 }
@@ -315,6 +345,7 @@ private fun LazyListScope.billItems(
     onOpenInvoice: (Int) -> Unit,
     onCopyValue: (String) -> Unit,
     onOpenBoleto: (Invoice) -> Unit,
+    onPix: (Invoice) -> Unit,
 ) {
     if (uiState.showOpenSummary(today)) {
         item(key = "open_summary") {
@@ -334,9 +365,11 @@ private fun LazyListScope.billItems(
             InvoiceCard(
                 invoice = invoice,
                 today = today,
+                generatingPix = uiState.generatingPixId == invoice.id,
                 onOpenInvoice = { onOpenInvoice(invoice.id) },
                 onCopyValue = onCopyValue,
                 onOpenBoleto = onOpenBoleto,
+                onPix = { onPix(invoice) },
             )
         }
     }
@@ -357,6 +390,7 @@ private fun LazyGridScope.billItems(
     onOpenInvoice: (Int) -> Unit,
     onCopyValue: (String) -> Unit,
     onOpenBoleto: (Invoice) -> Unit,
+    onPix: (Invoice) -> Unit,
 ) {
     if (uiState.showOpenSummary(today)) {
         item(key = "open_summary", span = { GridItemSpan(maxLineSpan) }) {
@@ -376,9 +410,11 @@ private fun LazyGridScope.billItems(
             InvoiceCard(
                 invoice = invoice,
                 today = today,
+                generatingPix = uiState.generatingPixId == invoice.id,
                 onOpenInvoice = { onOpenInvoice(invoice.id) },
                 onCopyValue = onCopyValue,
                 onOpenBoleto = onOpenBoleto,
+                onPix = { onPix(invoice) },
             )
         }
     }
@@ -526,9 +562,11 @@ private fun SummaryMetric(label: String, value: String, modifier: Modifier = Mod
 private fun InvoiceCard(
     invoice: Invoice,
     today: LocalDate,
+    generatingPix: Boolean,
     onOpenInvoice: () -> Unit,
     onCopyValue: (String) -> Unit,
     onOpenBoleto: (Invoice) -> Unit,
+    onPix: () -> Unit,
 ) {
     val overdue = invoice.isOverdue(today)
     val payable = invoice.status == InvoiceStatus.OPEN
@@ -605,21 +643,27 @@ private fun InvoiceCard(
                         icon = Icons.Outlined.ContentCopy,
                         title = "Copiar código",
                         caption = "Linha digitável",
-                        value = invoice.barcode,
+                        enabled = invoice.barcode != null,
                         modifier = Modifier.weight(1f),
-                    ) { onCopyValue(it) }
+                    ) { onCopyValue(invoice.barcode!!) }
                     PaymentAction(
                         icon = Icons.Filled.QrCode2,
                         title = "Copiar PIX",
-                        caption = "Pague agora",
-                        value = invoice.pixCode,
+                        caption = when {
+                            invoice.pixCode != null -> "Pague agora"
+                            invoice.canGeneratePix -> "Gerar agora"
+                            else -> "Indisponível"
+                        },
+                        enabled = invoice.pixCode != null || invoice.canGeneratePix,
+                        loading = generatingPix,
                         modifier = Modifier.weight(1f),
-                    ) { onCopyValue(it) }
+                        onAction = onPix,
+                    )
                     PaymentAction(
                         icon = Icons.Outlined.PictureAsPdf,
                         title = "Abrir boleto",
                         caption = "Visualizar PDF",
-                        value = invoice.boletoPath,
+                        enabled = invoice.boletoPath != null,
                         modifier = Modifier.weight(1f),
                     ) { onOpenBoleto(invoice) }
                 }
@@ -646,21 +690,22 @@ private fun InvoiceInfo(label: String, value: String, modifier: Modifier = Modif
 }
 
 /** Copy/open quick action — disabled look when the API carries no value
- * for it on this invoice (nothing to copy or open). */
+ * for it on this invoice; `loading` swaps the icon for a spinner
+ * (on-demand PIX generation in flight). */
 @Composable
 private fun PaymentAction(
     icon: ImageVector,
     title: String,
     caption: String,
-    value: String?,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
-    onAction: (String) -> Unit,
+    loading: Boolean = false,
+    onAction: () -> Unit,
 ) {
-    val enabled = value != null
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .clickable(enabled = enabled) { value?.let(onAction) }
+            .clickable(enabled = enabled && !loading, onClick = onAction)
             .alpha(if (enabled) 1f else 0.38f)
             .padding(vertical = Spacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -669,12 +714,23 @@ private fun PaymentAction(
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
             shape = CircleShape,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+            Box(
                 modifier = Modifier.padding(Spacing.xs).size(20.dp),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                if (loading) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(16.dp),
+                    )
+                } else {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
         Text(
             text = title,
@@ -745,6 +801,7 @@ private fun InvoiceListCompactPreview() {
             onOpenInvoice = {},
             onCopyValue = {},
             onOpenBoleto = {},
+            onPix = {},
         )
     }
 }
@@ -760,6 +817,7 @@ private fun InvoiceListGridPreview() {
             onOpenInvoice = {},
             onCopyValue = {},
             onOpenBoleto = {},
+            onPix = {},
         )
     }
 }

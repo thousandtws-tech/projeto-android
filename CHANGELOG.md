@@ -11,6 +11,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   Vencimento/Valor/Nº da fatura, e **ações de pagamento inline** — Copiar
   código (linha digitável), Copiar PIX e Abrir boleto (PDF) — sem abrir a
   tela de detalhes; ações sem dado na API aparecem desabilitadas.
+- "Copiar PIX" nos cards funciona de verdade: com `codigo_pix` inline na
+  resposta da lista copia na hora; sem código mas com `pix_sob_demanda`,
+  chama `GeneratePixUseCase` → `POST titulo/{id}/pix/` com spinner no
+  card, copia o código gerado e mergea no estado (próximo toque copia
+  direto); falha vira snackbar de erro. Legenda honesta: "Pague agora" /
+  "Gerar agora" / "Indisponível". Confirmação de cópia via snackbar.
 - `Invoice.boletoPath` passa a chegar como URL absoluta (resolvida contra
   a base configurada no `InvoiceRepositoryImpl`) — a UI só abre, sem
   conhecer o host.

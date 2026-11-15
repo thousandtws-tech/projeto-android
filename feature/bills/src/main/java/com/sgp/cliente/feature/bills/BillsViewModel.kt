@@ -9,6 +9,7 @@ import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.usecase.invoice.GetInvoicesUseCase
+import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,12 @@ data class BillsUiState(
     val nextOffset: Int = 0,
     val endReached: Boolean = false,
     val error: AppError? = null,
+    /** Invoice currently generating a PIX code (per-card spinner). */
+    val generatingPixId: Int? = null,
+    /** One-shot: a PIX code ready to be copied by the UI. */
+    val pixCodeToCopy: String? = null,
+    /** One-shot action error surfaced as a snackbar. */
+    val actionError: AppError? = null,
 ) {
     /** Competence label (e.g. `janeiro/2026`) → invoices, newest group first. */
     val grouped: List<Pair<String, List<Invoice>>> by lazy {
@@ -64,6 +71,7 @@ data class OpenSummary(
 @HiltViewModel
 class BillsViewModel @Inject constructor(
     private val getInvoices: GetInvoicesUseCase,
+    private val generatePix: GeneratePixUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillsUiState())
@@ -134,6 +142,55 @@ class BillsViewModel @Inject constructor(
             },
         )
     }
+
+    /**
+     * "Copiar PIX" on a card: copies the inline code when the API already
+     * delivered one, otherwise generates it on demand (`titulo/{id}/pix/`)
+     * and hands the code to the UI for clipboard + keeps it on the invoice
+     * so the next tap copies instantly.
+     */
+    fun requestPixCode(invoice: Invoice) {
+        val inline = invoice.pixCode
+        if (inline != null) {
+            _uiState.update { it.copy(pixCodeToCopy = inline) }
+            return
+        }
+        if (!invoice.canGeneratePix || _uiState.value.generatingPixId != null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(generatingPixId = invoice.id, actionError = null) }
+            generatePix(invoice.id).fold(
+                onSuccess = { pix ->
+                    val code = pix.code
+                    _uiState.update { state ->
+                        state.copy(
+                            generatingPixId = null,
+                            pixCodeToCopy = if (pix.isSuccess) code else null,
+                            actionError = if (pix.isSuccess) {
+                                null
+                            } else {
+                                AppError.Api(pix.message)
+                            },
+                            invoices = if (code != null) {
+                                state.invoices.map {
+                                    if (it.id == invoice.id) it.copy(pixCode = code) else it
+                                }
+                            } else {
+                                state.invoices
+                            },
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(generatingPixId = null, actionError = error)
+                    }
+                },
+            )
+        }
+    }
+
+    fun consumePixCodeToCopy() = _uiState.update { it.copy(pixCodeToCopy = null) }
+    fun consumeActionError() = _uiState.update { it.copy(actionError = null) }
 
     private companion object {
         const val TAG = "feature.bills"
