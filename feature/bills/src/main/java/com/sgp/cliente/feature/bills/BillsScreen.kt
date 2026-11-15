@@ -46,7 +46,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -455,7 +454,7 @@ private fun BillsUiState.attentionInvoice(today: LocalDate): Invoice? =
 private fun OverdueInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -572,7 +571,7 @@ private fun InvoiceCard(
 
     Surface(
         onClick = onOpenInvoice,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -599,7 +598,7 @@ private fun InvoiceCard(
                     },
                 )
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(
+                Button(
                     onClick = onOpenInvoice,
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                 ) {

@@ -11,11 +11,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   digitável), Copiar PIX e Abrir boleto (PDF) — sem abrir a tela de
   detalhes; cada ação só aparece quando a API traz dado real pra ela.
 - Cards de fatura seguem o padrão dos apps de provedores: superfície
-  neutra em todos os estados — atraso passa a ser sinalizado só pela pill
-  "Vencida · Prioridade" (rose, compacta) em vez do card inteiro em
-  `errorContainer`. O card de atenção "Fatura em atraso" também fica
-  neutro: badge `SgpStatusBadge` OVERDUE + `Button` padrão M3 "Pagar
-  agora" (cobalt), substituindo o pill custom vermelho.
+  cinza (`surfaceVariant`, mesmo tom do `SgpCard`) em todos os estados —
+  atraso passa a ser sinalizado só pela pill "Vencida · Prioridade"
+  (rose, compacta) em vez do card inteiro em `errorContainer`. O card de
+  atenção "Fatura em atraso" também fica neutro: badge
+  `SgpStatusBadge` OVERDUE + `Button` padrão M3 "Pagar agora" (cobalt),
+  substituindo o pill custom vermelho.
+- "Ver fatura" nos cards troca `OutlinedButton` por `Button` preenchido
+  (azul cobalt + texto branco) — mesmo estilo do botão "Entrar" do login.
 - "Copiar PIX" nos cards funciona de verdade: com `codigo_pix` inline na
   resposta da lista copia na hora; sem código mas com `pix_sob_demanda`,
   chama `GeneratePixUseCase` → `POST titulo/{id}/pix/` com spinner no
