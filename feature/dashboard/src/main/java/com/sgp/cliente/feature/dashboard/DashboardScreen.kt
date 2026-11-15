@@ -24,7 +24,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Card
@@ -77,6 +79,7 @@ import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.ServiceStatus
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -574,8 +577,7 @@ private fun CurrentInvoiceHeroCard(
                 color = onPrimary,
             )
             Text(
-                text = (if (overdue) "Venceu em " else "Vence em ") +
-                    DateFormatter.display(invoice.effectiveOrOriginalDueDate),
+                text = dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
                 style = MaterialTheme.typography.bodySmall,
                 color = onPrimary.copy(alpha = 0.85f),
             )
@@ -602,7 +604,9 @@ private fun CurrentInvoiceHeroCard(
     }
 }
 
-/** Compact tonal card for the upcoming invoices in the carousel. */
+/** Compact tonal card for upcoming invoices — competence label, due
+ * countdown and an explicit "Ver detalhes" affordance so the card reads
+ * as tappable. */
 @Composable
 private fun NextInvoiceCard(
     invoice: Invoice,
@@ -617,27 +621,83 @@ private fun NextInvoiceCard(
         shape = RoundedCornerShape(24.dp),
         modifier = modifier.fillMaxWidth().height(160.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(Spacing.md),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = "Vence em ${DateFormatter.display(invoice.effectiveOrOriginalDueDate)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(Spacing.md)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = invoice.effectiveOrOriginalDueDate
+                        ?.let { DateFormatter.competenceLabel(it) }
+                        ?.replaceFirstChar { it.titlecase() }
+                        ?: "Próxima fatura",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                SgpStatusBadge(
+                    text = if (overdue) "Vencida" else "Em aberto",
+                    kind = if (overdue) SgpBadgeKind.OVERDUE else SgpBadgeKind.OPEN,
+                )
+            }
             Text(
                 text = MoneyFormatter.brl(invoice.displayAmount),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-            )
-            SgpStatusBadge(
-                text = if (overdue) "Vencida" else "Em aberto",
-                kind = if (overdue) SgpBadgeKind.OVERDUE else SgpBadgeKind.OPEN,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CalendarMonth,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    text = dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text(
+                    text = "Ver detalhes",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
+}
+
+/** "Vence em 10/12/2026 · em 12 dias" / "Venceu em 10/11/2026 · há 8 dias". */
+private fun dueWithRelative(due: LocalDate?, today: LocalDate): String {
+    if (due == null) return DateFormatter.display(null)
+    val days = ChronoUnit.DAYS.between(today, due)
+    val rel = when {
+        days < -1L -> "há ${-days} dias"
+        days == -1L -> "há 1 dia"
+        days == 0L -> "hoje"
+        days == 1L -> "amanhã"
+        else -> "em $days dias"
+    }
+    val verb = if (days < 0) "Venceu em" else "Vence em"
+    return "$verb ${DateFormatter.display(due)} · $rel"
 }
 
 @Composable
