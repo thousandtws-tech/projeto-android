@@ -116,39 +116,56 @@ class BillsViewModel @Inject constructor(
     }
 
     private suspend fun fetch(offset: Int, replace: Boolean, forceRefresh: Boolean) {
-        getInvoices(
-            statusFilter = _uiState.value.filter,
-            offset = offset,
-            limit = PAGE_SIZE,
-            forceRefresh = forceRefresh,
-        ).fold(
-            onSuccess = { page ->
-                _uiState.update { state ->
-                    val merged = if (replace) page.items
-                    else (state.invoices + page.items).distinctBy(Invoice::id)
-                    state.copy(
-                        loading = false,
-                        refreshing = false,
-                        loadingMore = false,
-                        invoices = merged,
-                        nextOffset = page.nextOffset,
-                        endReached = !page.hasMore,
-                        error = null,
-                    )
-                }
-            },
-            onFailure = { error ->
-                AppLog.w(TAG, "invoice fetch failed offset=$offset: ${error::class.simpleName}")
-                _uiState.update {
-                    it.copy(
-                        loading = false,
-                        refreshing = false,
-                        loadingMore = false,
-                        error = error,
-                    )
-                }
-            },
-        )
+        var next = offset
+        var first = true
+        var keepGoing = true
+        while (keepGoing) {
+            keepGoing = false
+            getInvoices(
+                statusFilter = _uiState.value.filter,
+                offset = next,
+                limit = PAGE_SIZE,
+                forceRefresh = forceRefresh && first,
+            ).fold(
+                onSuccess = { page ->
+                    _uiState.update { state ->
+                        val merged = if (replace && first) {
+                            page.items
+                        } else {
+                            (state.invoices + page.items).distinctBy(Invoice::id)
+                        }
+                        state.copy(
+                            loading = false,
+                            refreshing = false,
+                            loadingMore = false,
+                            invoices = merged,
+                            nextOffset = page.nextOffset,
+                            endReached = !page.hasMore,
+                            error = null,
+                        )
+                    }
+                    // A filtered page can come back empty while the raw
+                    // stream still has more — keep pulling until a match
+                    // shows or the stream ends.
+                    if (page.hasMore && _uiState.value.invoices.isEmpty()) {
+                        keepGoing = true
+                        next = page.nextOffset
+                        first = false
+                    }
+                },
+                onFailure = { error ->
+                    AppLog.w(TAG, "invoice fetch failed offset=$next: ${error::class.simpleName}")
+                    _uiState.update {
+                        it.copy(
+                            loading = false,
+                            refreshing = false,
+                            loadingMore = false,
+                            error = error,
+                        )
+                    }
+                },
+            )
+        }
     }
 
     /**

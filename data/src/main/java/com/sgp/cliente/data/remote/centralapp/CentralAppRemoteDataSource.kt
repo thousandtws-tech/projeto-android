@@ -275,11 +275,16 @@ class CentralAppRemoteDataSource @Inject constructor(
     }
 }
 
-/** `grupo` values accepted by `titulo/list/` — feminine plurals; `todos` is a dead filter on the server. */
+/**
+ * `grupo` values we actually send to `titulo/list/`, verified against the
+ * live server: `abertos` covers only the payable-now subset (overdue +
+ * next-due — the right group for 2ª via), `todas` returns the full
+ * stream. Anything else (`canceladas`, `avencer`, …) is silently ignored
+ * and falls back to unfiltered, so UI status filters are applied
+ * client-side over `todas`.
+ */
 enum class InvoiceGroup(val apiValue: String) {
     OPEN("abertos"),
-    PAID("pagos"),
-    CANCELLED("canceladas"),
     ALL("todas"),
 }
 

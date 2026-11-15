@@ -45,10 +45,16 @@ Resposta: array `[{id, descricao, cliente_nome, cliente_cpfcnpj, situacao,
 vencimento, valor, servicos: [{id, plano, grupo, valor}]}]`.
 
 ### `titulo/list/` — faturas
-Campos: `contrato`, `grupo` (**`abertos`|`pagos`|`canceladas`|`todas`** —
-atenção: são plurais femininos; `todos` é um filtro reconhecido que retorna
-vazio), `pesquisa`, `limit`, `offset`.
-Com paginação responde envelope `{"total":N,"result":[…]}`; sem, array nu.
+Campos: `contrato`, `grupo`, `pesquisa`, `limit`, `offset`.
+`grupo` verificado contra `demo.sgp.net.br`: **`abertos`** = subconjunto
+"pagável agora" (vencida + próxima a vencer — usado na 2ª via), **`todas`**
+= stream completo, **`pagos`** = pagas; qualquer outro valor
+(`canceladas`, `avencer`, `todos`…) é **ignorado** e cai num fallback sem
+filtro, e o campo `status=` não existe neste endpoint. Por isso os filtros
+da UI (abertas/pagas/canceladas) são aplicados **client-side** sobre
+`grupo=todas`, paginando pelo `total` do envelope.
+Com paginação responde envelope `{"total":N,"result":[…]}` (o `total` é o
+total de títulos do contrato, não do grupo filtrado); sem, array nu.
 Cada fatura: `id`, `numero_documento`, `situacao` ("Em aberto"/"Paga"/
 "Cancelada"/"Vencida"), `situacao_atrasada_dias`, `data_vencimento`
 (`dd/MM/yyyy`), `data_pagamento`, `valor`, `valortotal`, `linha_digitavel`,

@@ -163,9 +163,14 @@ class InvoiceRepositoryImpl @Inject constructor(
         limit: Int,
         forceRefresh: Boolean,
     ): AppResult<PagedResult<Invoice>> {
-        val key = PageKey(contractId, statusFilter, offset, limit)
+        // Server `grupo` values cannot express our filters — `abertos` is
+        // only the payable-now subset, `canceladas` is ignored and falls
+        // back to everything — so we always page the raw `todas` stream and
+        // filter client-side. The cache key skips the filter on purpose:
+        // all tabs share the same raw pages.
+        val key = PageKey(contractId, null, offset, limit)
         if (!forceRefresh) {
-            cachedPage(key)?.let { return AppResult.success(it) }
+            cachedPage(key)?.let { return AppResult.success(it.filteredBy(statusFilter)) }
         }
         val lock = keyLocksMutex.withLock {
             if (keyLocks.size >= MAX_KEY_LOCKS) keyLocks.clear()
@@ -181,39 +186,50 @@ class InvoiceRepositoryImpl @Inject constructor(
             lock.unlock()
             pageCache[key]
                 ?.takeIf { it.atMillis >= arrivedAt }
-                ?.let { return AppResult.success(it.page) }
+                ?.let { return AppResult.success(it.page.filteredBy(statusFilter)) }
             // The in-flight fetch failed — fall through and retry ourselves.
         }
         return lock.withLock {
             if (!forceRefresh) {
-                cachedPage(key)?.let { return@withLock AppResult.success(it) }
+                cachedPage(key)?.let { return@withLock AppResult.success(it.filteredBy(statusFilter)) }
             }
             remote.listInvoices(
                 contractId = contractId,
-                group = statusFilter.toInvoiceGroup(),
+                group = InvoiceGroup.ALL,
                 search = "",
                 offset = offset,
                 limit = limit,
             ).map { dtoPage ->
-                val invoices = dtoPage.items.mapNotNull { it.toDomain()?.withResolvedBoleto() }
+                val raw = dtoPage.items.mapNotNull { it.toDomain()?.withResolvedBoleto() }
                 val page = PagedResult(
-                    items = invoices,
+                    items = raw,
                     offset = offset,
                     limit = limit,
                     // The {"total",…,"result"} envelope carries the real
                     // count; a bare array means we estimate from page fill.
-                    total = dtoPage.total ?: if (invoices.size >= limit) {
-                        offset + invoices.size + 1
+                    total = dtoPage.total ?: if (raw.size >= limit) {
+                        offset + raw.size + 1
                     } else {
-                        offset + invoices.size
+                        offset + raw.size
                     },
+                    consumed = raw.size,
                 )
-                if (offset == 0) lastPage = contractId to invoices
+                if (offset == 0) lastPage = contractId to raw
                 storePage(key, page)
-                page
+                page.filteredBy(statusFilter)
             }
         }
     }
+
+    /** Client-side status filter over a raw stream page — keeps the raw
+     * [PagedResult.consumed] so `hasMore`/`nextOffset` still walk the
+     * unfiltered stream. */
+    private fun PagedResult<Invoice>.filteredBy(statusFilter: Int?): PagedResult<Invoice> =
+        if (statusFilter == null) {
+            this
+        } else {
+            copy(items = items.filter { it.statusId == statusFilter })
+        }
 
     private fun cachedPage(key: PageKey): PagedResult<Invoice>? =
         pageCache[key]
@@ -299,13 +315,6 @@ class InvoiceRepositoryImpl @Inject constructor(
                 baseUrlProvider.current().resolve(it)?.toString() ?: it
             },
         )
-
-    private fun Int?.toInvoiceGroup(): InvoiceGroup = when (this) {
-        1 -> InvoiceGroup.OPEN
-        2 -> InvoiceGroup.PAID
-        3 -> InvoiceGroup.CANCELLED
-        else -> InvoiceGroup.ALL
-    }
 
     private companion object {
         const val STATUS_OK = 1

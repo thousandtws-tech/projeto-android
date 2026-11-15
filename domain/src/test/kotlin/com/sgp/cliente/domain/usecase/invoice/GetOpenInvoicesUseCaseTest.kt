@@ -76,6 +76,9 @@ private class FakeInvoiceRepository(
         invoices.firstOrNull { it.id == invoiceId }
             ?.let { AppResult.success(it) }
             ?: AppResult.failure(AppError.NotFound)
+
+    override suspend fun getBoletoPdf(url: String): AppResult<ByteArray> =
+        AppResult.failure(AppError.Api("not implemented"))
 }
 
 class GetOpenInvoicesUseCaseTest {

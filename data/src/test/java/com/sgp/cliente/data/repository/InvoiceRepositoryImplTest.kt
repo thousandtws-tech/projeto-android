@@ -18,6 +18,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,12 +46,15 @@ class InvoiceRepositoryImplTest {
         clock = clock,
     )
 
-    private fun page(vararg ids: Int) = CentralInvoicePage(
+    private fun page(vararg ids: Int, status: String = "Em aberto") = CentralInvoicePage(
         items = ids.map {
-            CentralInvoiceDto(id = it, status = "Em aberto", dueDate = "10/03/2026", amount = "100.0")
+            CentralInvoiceDto(id = it, status = status, dueDate = "10/03/2026", amount = "100.0")
         },
         total = null,
     )
+
+    private fun dto(id: Int, status: String) =
+        CentralInvoiceDto(id = id, status = status, dueDate = "10/03/2026", amount = "100.0")
 
     private fun stubPage(
         group: InvoiceGroup,
@@ -64,32 +68,36 @@ class InvoiceRepositoryImplTest {
 
     @Test
     fun `repeated first-page call within TTL hits cache`() = runTest {
-        stubPage(InvoiceGroup.OPEN, result = page(1, 2, 3))
+        stubPage(InvoiceGroup.ALL, result = page(1, 2, 3))
 
         val first = repository.getInvoices(101, statusFilter = 1)
         val second = repository.getInvoices(101, statusFilter = 1)
 
-        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
         assertTrue(second.isSuccess)
         assertEquals(listOf(1, 2, 3), second.getOrNull()!!.items.map { it.id })
     }
 
     @Test
-    fun `different params bypass the cache`() = runTest {
-        stubPage(InvoiceGroup.OPEN, result = page(1))
-        stubPage(InvoiceGroup.ALL, result = page(2, 3))
+    fun `different filters share the same raw stream cache`() = runTest {
+        stubPage(
+            InvoiceGroup.ALL,
+            result = CentralInvoicePage(
+                items = listOf(dto(1, "Em aberto"), dto(2, "Pago")),
+                total = null,
+            ),
+        )
 
         repository.getInvoices(101, statusFilter = 1)
-        val other = repository.getInvoices(101, statusFilter = null)
+        val paid = repository.getInvoices(101, statusFilter = 2)
 
-        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
         coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
-        assertEquals(listOf(2, 3), other.getOrNull()!!.items.map { it.id })
+        assertEquals(listOf(2), paid.getOrNull()!!.items.map { it.id })
     }
 
     @Test
     fun `forceRefresh bypasses and rewrites the cache`() = runTest {
-        coEvery { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) } returnsMany listOf(
+        coEvery { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) } returnsMany listOf(
             AppResult.success(page(1)),
             AppResult.success(page(9)),
         )
@@ -98,25 +106,25 @@ class InvoiceRepositoryImplTest {
         val forced = repository.getInvoices(101, statusFilter = 1, forceRefresh = true)
         val cachedAgain = repository.getInvoices(101, statusFilter = 1)
 
-        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
         assertEquals(listOf(9), forced.getOrNull()!!.items.map { it.id })
         assertEquals(listOf(9), cachedAgain.getOrNull()!!.items.map { it.id })
     }
 
     @Test
     fun `expired cache refetches`() = runTest {
-        stubPage(InvoiceGroup.OPEN, result = page(1))
+        stubPage(InvoiceGroup.ALL, result = page(1))
 
         repository.getInvoices(101, statusFilter = 1)
         clock.advance(Duration.ofMinutes(2).toMillis())
         repository.getInvoices(101, statusFilter = 1)
 
-        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
     }
 
     @Test
     fun `failures are not cached`() = runTest {
-        coEvery { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) } returnsMany listOf(
+        coEvery { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) } returnsMany listOf(
             AppResult.failure(com.sgp.cliente.core.common.error.AppError.Server),
             AppResult.success(page(7)),
         )
@@ -124,13 +132,13 @@ class InvoiceRepositoryImplTest {
         repository.getInvoices(101, statusFilter = 1)
         val retry = repository.getInvoices(101, statusFilter = 1)
 
-        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 2) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
         assertEquals(listOf(7), retry.getOrNull()!!.items.map { it.id })
     }
 
     @Test
     fun `concurrent identical calls are coalesced into one request`() = runTest {
-        coEvery { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) } coAnswers {
+        coEvery { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) } coAnswers {
             delay(100)
             AppResult.success(page(1, 2))
         }
@@ -141,15 +149,15 @@ class InvoiceRepositoryImplTest {
             async { repository.getInvoices(101, statusFilter = 1, forceRefresh = true) },
         )
 
-        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
         results.forEach {
             assertEquals(listOf(1, 2), it.getOrNull()!!.items.map { item -> item.id })
         }
     }
 
     @Test
-    fun `different keys are cached independently`() = runTest {
-        stubPage(InvoiceGroup.OPEN, result = page(1))
+    fun `different offsets are cached independently`() = runTest {
+        stubPage(InvoiceGroup.ALL, result = page(1))
         stubPage(InvoiceGroup.ALL, limit = 25, result = page(5))
 
         repository.getInvoices(101, statusFilter = 1)
@@ -157,18 +165,70 @@ class InvoiceRepositoryImplTest {
         repository.getInvoices(101, statusFilter = 1)
         repository.getInvoices(101, statusFilter = null, limit = 25)
 
-        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.OPEN, "", 0, 250) }
+        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
         coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 25) }
     }
 
     @Test
-    fun `status filter 3 requests the cancelled group`() = runTest {
-        stubPage(InvoiceGroup.CANCELLED, result = page(1))
+    fun `status filter keeps only matching rows client-side`() = runTest {
+        stubPage(
+            InvoiceGroup.ALL,
+            result = CentralInvoicePage(
+                items = listOf(
+                    dto(1, "Em aberto"),
+                    dto(2, "Atrasada"),
+                    dto(3, "Pago"),
+                    dto(4, "Cancelado"),
+                ),
+                total = 4,
+            ),
+        )
 
-        val result = repository.getInvoices(101, statusFilter = 3)
+        val open = repository.getInvoices(101, statusFilter = 1)
+        val paid = repository.getInvoices(101, statusFilter = 2)
+        val cancelled = repository.getInvoices(101, statusFilter = 3)
 
-        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.CANCELLED, "", 0, 250) }
-        assertTrue(result.isSuccess)
+        assertEquals(listOf(1, 2), open.getOrNull()!!.items.map { it.id })
+        assertEquals(listOf(3), paid.getOrNull()!!.items.map { it.id })
+        assertEquals(listOf(4), cancelled.getOrNull()!!.items.map { it.id })
+        // The raw stream page was fetched once and shared across filters.
+        coVerify(exactly = 1) { remote.listInvoices(101, InvoiceGroup.ALL, "", 0, 250) }
+    }
+
+    @Test
+    fun `filtered page keeps pagination of the raw stream`() = runTest {
+        // Filter drops everything visible but the stream still has pages —
+        // consumed carries the raw count so nextOffset/hasMore stay honest.
+        stubPage(
+            InvoiceGroup.ALL,
+            limit = 25,
+            result = CentralInvoicePage(
+                items = listOf(dto(1, "Em aberto"), dto(2, "Atrasada")),
+                total = 30,
+            ),
+        )
+
+        val page = repository.getInvoices(101, statusFilter = 3, limit = 25).getOrNull()!!
+
+        assertTrue(page.items.isEmpty())
+        assertEquals(2, page.nextOffset)
+        assertTrue(page.hasMore)
+    }
+
+    @Test
+    fun `filtered page reports end when the raw stream is exhausted`() = runTest {
+        stubPage(
+            InvoiceGroup.ALL,
+            result = CentralInvoicePage(
+                items = listOf(dto(1, "Em aberto")),
+                total = 1,
+            ),
+        )
+
+        val page = repository.getInvoices(101, statusFilter = 3).getOrNull()!!
+
+        assertTrue(page.items.isEmpty())
+        assertFalse(page.hasMore)
     }
 
     @Test
@@ -194,7 +254,7 @@ class InvoiceRepositoryImplTest {
     @Test
     fun `relative boleto link resolves against the configured base url`() = runTest {
         stubPage(
-            InvoiceGroup.OPEN,
+            InvoiceGroup.ALL,
             result = CentralInvoicePage(
                 items = listOf(
                     CentralInvoiceDto(
@@ -220,7 +280,7 @@ class InvoiceRepositoryImplTest {
     @Test
     fun `absolute boleto link passes through unchanged`() = runTest {
         stubPage(
-            InvoiceGroup.OPEN,
+            InvoiceGroup.ALL,
             result = CentralInvoicePage(
                 items = listOf(
                     CentralInvoiceDto(
@@ -245,11 +305,10 @@ class InvoiceRepositoryImplTest {
 
     @Test
     fun `group api values match the live server contract`() {
-        // Verified against demo.sgp.net.br: feminine plurals; "todos" is a
-        // recognized-but-dead filter that always returns an empty page.
+        // Verified against demo.sgp.net.br: `abertos` is the payable-now
+        // subset (overdue + next due), `todas` the full stream; unknown
+        // values silently fall back to unfiltered — hence client filtering.
         assertEquals("abertos", InvoiceGroup.OPEN.apiValue)
-        assertEquals("pagos", InvoiceGroup.PAID.apiValue)
-        assertEquals("canceladas", InvoiceGroup.CANCELLED.apiValue)
         assertEquals("todas", InvoiceGroup.ALL.apiValue)
     }
 }

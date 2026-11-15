@@ -37,6 +37,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   esmaecida acima): `LazyColumn` interna substituída por `Column` com
   `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
+### Corrigido
+- Filtros de fatura (Em aberto/Pagas/Canceladas) voltam a responder
+  corretamente: a API `titulo/list/` não honra `grupo=canceladas` nem o
+  campo `status` (caem num fallback sem filtro), e `grupo=abertos` cobre
+  só o subconjunto "pagável agora" — então a listagem passa a paginar o
+  stream `grupo=todas` e filtrar por `situacao` no cliente
+  (`PagedResult.consumed` preserva a posição real no stream); aba "Em
+  aberto" mostrava só 2 das 7 faturas da conta e "Canceladas" listava
+  tudo.
+
 ### Adicionado
 - Ações de pagamento do card de fatura são deduplicadas: só aparecem
   quando a API traz dado real para elas — "Copiar PIX" só quando um

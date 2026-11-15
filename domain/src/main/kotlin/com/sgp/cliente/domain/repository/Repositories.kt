@@ -63,8 +63,10 @@ interface ContractRepository {
 interface InvoiceRepository {
     /**
      * `POST /api/centralapp/titulo/list/`.
-     * [statusFilter] uses the SGP codes (1=aberto, 2=pago, 3=cancelado);
-     * they map to the API `grupo` values (abertos/pagos/todos).
+     * [statusFilter] uses the SGP codes (1=aberto, 2=pago, 3=cancelado) and
+     * is applied client-side — the server's `grupo` values cannot express
+     * them (`abertos` is only the payable-now subset; `canceladas` is
+     * ignored), so the raw `todas` stream is paged and filtered locally.
      */
     suspend fun getInvoices(
         contractId: Int,

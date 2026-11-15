@@ -56,7 +56,8 @@ class GetOpenInvoicesUseCase @Inject constructor(
 
 /**
  * Paged invoice listing (`POST /api/centralapp/titulo/list/`).
- * [statusFilter] null keeps the API default (open + paid).
+ * [statusFilter] is applied client-side over the `todas` stream — the
+ * server's `grupo` values cannot express "all open" or "cancelled".
  */
 class GetInvoicesUseCase @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
