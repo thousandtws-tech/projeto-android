@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,12 +58,11 @@ fun SgpCopyableValue(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = { copyToClipboard(context, label, value) }) {
-            Icon(
-                imageVector = Icons.Filled.ContentCopy,
-                contentDescription = "Copiar $label",
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
+        SgpTooltipButton(
+            icon = Icons.Filled.ContentCopy,
+            description = "Copiar $label",
+            onClick = { copyToClipboard(context, label, value) },
+            tint = MaterialTheme.colorScheme.primary,
+        )
     }
 }

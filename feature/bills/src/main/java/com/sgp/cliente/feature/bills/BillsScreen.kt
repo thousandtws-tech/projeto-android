@@ -1,5 +1,6 @@
 package com.sgp.cliente.feature.bills
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -21,9 +21,11 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -33,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -126,17 +129,19 @@ private fun StatusFilters(selected: InvoiceStatus?, onSelect: (InvoiceStatus?) -
         InvoiceStatus.PAID to "Pagas",
         InvoiceStatus.CANCELLED to "Canceladas",
     )
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
     ) {
-        items(options.size) { index ->
-            val (status, label) = options[index]
-            FilterChip(
+        options.forEachIndexed { index, (status, label) ->
+            SegmentedButton(
                 selected = selected == status,
                 onClick = { onSelect(status) },
-                label = { Text(label) },
-            )
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+            ) {
+                Text(label)
+            }
         }
     }
 }

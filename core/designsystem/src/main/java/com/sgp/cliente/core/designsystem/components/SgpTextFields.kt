@@ -5,9 +5,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,13 +95,11 @@ fun SgpPasswordField(
         visualTransformation =
             if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            IconButton(onClick = { visible = !visible }) {
-                Icon(
-                    imageVector = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = if (visible) "Ocultar senha" else "Mostrar senha",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            SgpTooltipButton(
+                icon = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                description = if (visible) "Ocultar senha" else "Mostrar senha",
+                onClick = { visible = !visible },
+            )
         },
         modifier = modifier,
     )

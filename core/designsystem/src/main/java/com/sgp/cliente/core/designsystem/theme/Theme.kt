@@ -61,8 +61,8 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * App theme. Dynamic color is intentionally OFF by default so the
- * provider's brand identity stays consistent across devices.
+ * App theme. Dynamic color is intentionally OFF so the provider's brand
+ * identity stays consistent.
  */
 @Composable
 fun SgpTheme(

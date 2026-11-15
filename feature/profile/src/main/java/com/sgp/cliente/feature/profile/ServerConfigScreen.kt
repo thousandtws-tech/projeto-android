@@ -12,8 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -28,6 +26,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpTextField
+import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
@@ -49,9 +48,11 @@ fun ServerConfigScreen(
             TopAppBar(
                 title = { Text("Servidor do provedor") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
-                    }
+                    SgpTooltipButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        description = "Voltar",
+                        onClick = onBack,
+                    )
                 },
             )
         },

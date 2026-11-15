@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -173,16 +173,12 @@ private fun LoginHeader(onConfigureServer: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.xxs),
         )
-        IconButton(
+        SgpTooltipButton(
+            icon = Icons.Filled.Settings,
+            description = "Configurar servidor",
             onClick = onConfigureServer,
             modifier = Modifier.align(Alignment.End),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Settings,
-                contentDescription = "Configurar servidor",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        )
     }
 }
 

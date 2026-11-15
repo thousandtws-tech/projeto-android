@@ -35,6 +35,7 @@ import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonBox
+import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
@@ -57,9 +58,11 @@ fun PreferencesScreen(
             TopAppBar(
                 title = { Text("Preferências") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
-                    }
+                    SgpTooltipButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        description = "Voltar",
+                        onClick = onBack,
+                    )
                 },
             )
         },

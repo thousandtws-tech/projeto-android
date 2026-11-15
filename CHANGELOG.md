@@ -4,6 +4,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ## [Unreleased]
 
+### Adicionado
+- Modernização Material 3 (m3 1.4.0): filtros de fatura migrados de
+  `FilterChip` para `SingleChoiceSegmentedButtonRow` conectada;
+  `SgpTooltipButton` (TooltipBox + PlainTooltip) aplicado a botões
+  somente-ícone (voltar, copiar, mostrar senha, engrenagem do login);
+  `enableOnBackInvokedCallback` no manifest ativa o predictive back do
+  Android 13+.
+
 ### Corrigido
 - Integração real `/api/centralapp/` validada ponta a ponta em
   `demo.sgp.net.br` (descoberta → ALTCHA → login JWT → faturas):

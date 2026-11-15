@@ -11,8 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -38,6 +36,7 @@ import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonBillDetails
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
+import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.Spacing
 import com.sgp.cliente.domain.model.InvoiceStatus
@@ -65,9 +64,11 @@ fun BillDetailsScreen(
             TopAppBar(
                 title = { Text("Detalhes da fatura") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
-                    }
+                    SgpTooltipButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        description = "Voltar",
+                        onClick = onBack,
+                    )
                 },
             )
         },
