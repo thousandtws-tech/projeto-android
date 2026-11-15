@@ -49,6 +49,41 @@ class FormattersTest {
     }
 
     @Test
+    fun `due with relative counts down to due date`() {
+        val today = LocalDate.of(2026, 11, 28)
+        assertEquals(
+            "Vence em 10/12/2026 · em 12 dias",
+            DateFormatter.dueWithRelative(LocalDate.of(2026, 12, 10), today),
+        )
+        assertEquals(
+            "Vence em 29/11/2026 · amanhã",
+            DateFormatter.dueWithRelative(LocalDate.of(2026, 11, 29), today),
+        )
+        assertEquals(
+            "Vence em 28/11/2026 · hoje",
+            DateFormatter.dueWithRelative(today, today),
+        )
+    }
+
+    @Test
+    fun `due with relative counts elapsed days when overdue`() {
+        val today = LocalDate.of(2026, 11, 28)
+        assertEquals(
+            "Venceu em 10/11/2026 · há 18 dias",
+            DateFormatter.dueWithRelative(LocalDate.of(2026, 11, 10), today),
+        )
+        assertEquals(
+            "Venceu em 27/11/2026 · há 1 dia",
+            DateFormatter.dueWithRelative(LocalDate.of(2026, 11, 27), today),
+        )
+    }
+
+    @Test
+    fun `due with relative tolerates missing date`() {
+        assertEquals("—", DateFormatter.dueWithRelative(null, LocalDate.now()))
+    }
+
+    @Test
     fun `document formats raw CPF digits`() {
         assertEquals("141.046.132-74", DocumentFormatter.display("14104613274"))
     }

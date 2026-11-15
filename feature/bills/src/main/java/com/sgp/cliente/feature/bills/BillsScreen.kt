@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -20,12 +21,19 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -38,7 +46,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
@@ -182,9 +193,14 @@ private fun LazyListScope.billItems(
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
 ) {
+    uiState.attentionInvoice(today)?.let { overdue ->
+        item(key = "overdue_hero") {
+            OverdueInvoiceCard(overdue, today) { onOpenInvoice(overdue.id) }
+        }
+    }
     uiState.grouped.forEach { (competence, invoices) ->
         item(key = "header_$competence") {
-            CompetenceHeader(competence)
+            CompetenceHeader(competence, invoices)
         }
         items(invoices, key = { it.id }) { invoice ->
             InvoiceRow(
@@ -198,6 +214,10 @@ private fun LazyListScope.billItems(
         item(key = "loading_more") {
             SgpSkeletonInvoiceCard()
         }
+    } else if (uiState.endReached && uiState.invoices.size > 5) {
+        item(key = "end_of_list") {
+            EndOfHistory()
+        }
     }
 }
 
@@ -206,9 +226,14 @@ private fun LazyGridScope.billItems(
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
 ) {
+    uiState.attentionInvoice(today)?.let { overdue ->
+        item(key = "overdue_hero", span = { GridItemSpan(maxLineSpan) }) {
+            OverdueInvoiceCard(overdue, today) { onOpenInvoice(overdue.id) }
+        }
+    }
     uiState.grouped.forEach { (competence, invoices) ->
         item(key = "header_$competence", span = { GridItemSpan(maxLineSpan) }) {
-            CompetenceHeader(competence)
+            CompetenceHeader(competence, invoices)
         }
         items(invoices, key = { it.id }) { invoice ->
             InvoiceRow(
@@ -222,17 +247,94 @@ private fun LazyGridScope.billItems(
         item(key = "loading_more", span = { GridItemSpan(maxLineSpan) }) {
             SgpSkeletonInvoiceCard()
         }
+    } else if (uiState.endReached && uiState.invoices.size > 5) {
+        item(key = "end_of_list", span = { GridItemSpan(maxLineSpan) }) {
+            EndOfHistory()
+        }
     }
 }
 
+/** First overdue invoice worth surfacing — hidden when the active filter
+ * cannot contain it (Pagas/Canceladas). */
+private fun BillsUiState.attentionInvoice(today: LocalDate): Invoice? =
+    if (filter == null || filter == InvoiceStatus.OPEN) {
+        invoices.firstOrNull { it.isOverdue(today) }
+    } else {
+        null
+    }
+
+/** Attention card pinned to the top when an invoice is overdue — the
+ * money-owed call to action users must not miss. */
 @Composable
-private fun CompetenceHeader(competence: String) {
-    Text(
-        text = competence,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = Spacing.xs),
-    )
+private fun OverdueInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(Spacing.md)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Fatura em atraso",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                Surface(
+                    onClick = onClick,
+                    color = MaterialTheme.colorScheme.error,
+                    shape = CircleShape,
+                ) {
+                    Text(
+                        text = "Pagar agora",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
+            }
+            Text(
+                text = MoneyFormatter.brl(invoice.displayAmount),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+            Text(
+                text = DateFormatter.dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
+    }
+}
+
+/** Group label + real count/subtotal so the user sees the month's weight. */
+@Composable
+private fun CompetenceHeader(competence: String, invoices: List<Invoice>) {
+    val subtotal = invoices.sumOf { it.displayAmount ?: 0.0 }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = competence.replaceFirstChar { it.titlecase() },
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "${invoices.size} " +
+                (if (invoices.size == 1) "fatura" else "faturas") +
+                " · ${MoneyFormatter.brl(subtotal)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -241,16 +343,27 @@ private fun InvoiceRow(invoice: Invoice, today: LocalDate, onClick: () -> Unit) 
     SgpCard(onClick = onClick) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(Spacing.xs).size(20.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = MoneyFormatter.brl(invoice.displayAmount),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "Vencimento ${DateFormatter.display(invoice.effectiveOrOriginalDueDate)}",
+                    text = invoice.subline(today),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -269,8 +382,33 @@ private fun InvoiceRow(invoice: Invoice, today: LocalDate, onClick: () -> Unit) 
                     else -> SgpBadgeKind.OPEN
                 },
             )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
+}
+
+/** Context line: paid date for paid bills, due countdown for open ones,
+ * plain due date for cancelled (relative days would be misleading). */
+private fun Invoice.subline(today: LocalDate): String = when (status) {
+    InvoiceStatus.PAID -> "Paga em ${DateFormatter.display(paidAt ?: effectiveOrOriginalDueDate)}"
+    InvoiceStatus.CANCELLED -> "Vencimento ${DateFormatter.display(effectiveOrOriginalDueDate)}"
+    else -> DateFormatter.dueWithRelative(effectiveOrOriginalDueDate, today)
+}
+
+@Composable
+private fun EndOfHistory() {
+    Text(
+        text = "Você viu todas as faturas",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.md),
+    )
 }
 
 private fun previewInvoice(

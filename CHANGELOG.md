@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
+- Modernização da tela de Faturas: card de atenção "Fatura em atraso"
+  (errorContainer + pill "Pagar agora") quando há vencida nos filtros
+  Todas/Em aberto; headers de competência com contagem e subtotal real;
+  linhas de fatura com ícone tonal, "Paga em…" para pagas, contagem de
+  dias para abertas e chevron de affordance; rodapé "Você viu todas as
+  faturas" ao fim da paginação.
+- `DateFormatter.dueWithRelative` (core:common) — "Vence em X · em N
+  dias"/"Venceu em X · há N dias", compartilhado entre Dashboard e
+  Faturas, com testes.
 - "Minhas faturas" do Dashboard migrada para `HorizontalUncontainedCarousel`
   (M3 1.4.0): card hero full-color da fatura atual (status pill translúcido
   + ação "Pagar agora" em pill branca), cards tonais das próximas faturas

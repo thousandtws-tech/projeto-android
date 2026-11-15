@@ -79,7 +79,6 @@ import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.ServiceStatus
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -577,7 +576,7 @@ private fun CurrentInvoiceHeroCard(
                 color = onPrimary,
             )
             Text(
-                text = dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
+                text = DateFormatter.dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
                 style = MaterialTheme.typography.bodySmall,
                 color = onPrimary.copy(alpha = 0.85f),
             )
@@ -658,7 +657,7 @@ private fun NextInvoiceCard(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
+                    text = DateFormatter.dueWithRelative(invoice.effectiveOrOriginalDueDate, today),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -683,21 +682,6 @@ private fun NextInvoiceCard(
             }
         }
     }
-}
-
-/** "Vence em 10/12/2026 · em 12 dias" / "Venceu em 10/11/2026 · há 8 dias". */
-private fun dueWithRelative(due: LocalDate?, today: LocalDate): String {
-    if (due == null) return DateFormatter.display(null)
-    val days = ChronoUnit.DAYS.between(today, due)
-    val rel = when {
-        days < -1L -> "há ${-days} dias"
-        days == -1L -> "há 1 dia"
-        days == 0L -> "hoje"
-        days == 1L -> "amanhã"
-        else -> "em $days dias"
-    }
-    val verb = if (days < 0) "Venceu em" else "Vence em"
-    return "$verb ${DateFormatter.display(due)} · $rel"
 }
 
 @Composable

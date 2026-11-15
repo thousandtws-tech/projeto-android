@@ -4,6 +4,7 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 private val PT_BR: Locale = Locale.forLanguageTag("pt-BR")
@@ -59,5 +60,23 @@ object DateFormatter {
     fun competenceLabel(date: LocalDate): String {
         val month = date.month.getDisplayName(TextStyle.FULL, PT_BR)
         return "$month/${date.year}"
+    }
+
+    /**
+     * Due date with day countdown, e.g. `Vence em 10/12/2026 · em 12 dias`
+     * or `Venceu em 10/11/2026 · há 8 dias`.
+     */
+    fun dueWithRelative(due: LocalDate?, today: LocalDate): String {
+        if (due == null) return display(null)
+        val days = ChronoUnit.DAYS.between(today, due)
+        val rel = when {
+            days < -1L -> "há ${-days} dias"
+            days == -1L -> "há 1 dia"
+            days == 0L -> "hoje"
+            days == 1L -> "amanhã"
+            else -> "em $days dias"
+        }
+        val verb = if (days < 0) "Venceu em" else "Vence em"
+        return "$verb ${display(due)} · $rel"
     }
 }
