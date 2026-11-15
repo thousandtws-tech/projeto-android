@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
     primary = Brand40,
@@ -27,6 +28,11 @@ private val LightColors = lightColorScheme(
     onSurface = Slate10,
     surfaceVariant = Slate95,
     onSurfaceVariant = Slate20,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Slate99,
+    surfaceContainer = Slate97,
+    surfaceContainerHigh = Slate95,
+    surfaceContainerHighest = Slate90,
     outline = Slate40,
     inverseSurface = Slate10,
     inverseOnSurface = Slate95,
@@ -54,6 +60,11 @@ private val DarkColors = darkColorScheme(
     onSurface = Slate95,
     surfaceVariant = Slate20,
     onSurfaceVariant = Slate95,
+    surfaceContainerLowest = Slate05,
+    surfaceContainerLow = Slate10,
+    surfaceContainer = Slate15,
+    surfaceContainerHigh = Slate20,
+    surfaceContainerHighest = Slate25,
     outline = Slate60,
     inverseSurface = Slate95,
     inverseOnSurface = Slate10,
