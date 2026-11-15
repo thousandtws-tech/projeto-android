@@ -132,6 +132,7 @@ fun SgpApp(
                 onOpenInvoice = { id -> navController.navigate(Routes.billDetails(id)) },
                 onOpenPreferences = { navController.navigate(Routes.PREFERENCES) },
                 onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
+                onOpenContracts = { navController.navigate(Routes.CONTRACTS) },
                 viewModelStoreOwner = entry,
             )
         }

@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -15,20 +18,30 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
@@ -39,6 +52,8 @@ import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
 import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpEmptyState
 import com.sgp.cliente.core.designsystem.components.SgpErrorView
+import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
+import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonDashboard
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
 import com.sgp.cliente.core.designsystem.components.SgpTextButton
@@ -50,6 +65,7 @@ import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
+import com.sgp.cliente.domain.model.ServiceStatus
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
 import java.time.LocalDate
 
@@ -58,15 +74,15 @@ import java.time.LocalDate
 fun DashboardScreen(
     onOpenInvoice: (Int) -> Unit,
     onOpenBills: () -> Unit,
+    onOpenPromise: () -> Unit,
+    onOpenContracts: () -> Unit,
+    onOpenProfile: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Início") }) },
-        modifier = modifier,
-    ) { padding ->
+    Scaffold(modifier = modifier) { padding ->
         PullToRefreshBox(
             // Hide the spinner while the skeleton is showing — they
             // represent the same load, showing both is visual noise.
@@ -79,7 +95,15 @@ fun DashboardScreen(
                     uiState.loading -> SgpSkeletonDashboard(Modifier.fillMaxSize())
                     uiState.error != null && uiState.all.isEmpty() ->
                         SgpErrorView(uiState.error!!, viewModel::refresh, Modifier.fillMaxSize())
-                    else -> DashboardContent(uiState, onOpenInvoice, onOpenBills)
+                    else -> DashboardContent(
+                        uiState = uiState,
+                        onOpenInvoice = onOpenInvoice,
+                        onOpenBills = onOpenBills,
+                        onOpenPromise = onOpenPromise,
+                        onOpenContracts = onOpenContracts,
+                        onOpenProfile = onOpenProfile,
+                        onLogout = viewModel::logout,
+                    )
                 }
             }
         }
@@ -91,6 +115,10 @@ private fun DashboardContent(
     uiState: DashboardUiState,
     onOpenInvoice: (Int) -> Unit,
     onOpenBills: () -> Unit,
+    onOpenPromise: () -> Unit,
+    onOpenContracts: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onLogout: () -> Unit,
 ) {
     val today = LocalDate.now()
     if (currentWindowWidthSizeClass() == WindowWidthSizeClass.Compact) {
@@ -99,7 +127,10 @@ private fun DashboardContent(
             contentPadding = PaddingValues(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            dashboardItems(uiState, today, onOpenInvoice, onOpenBills)
+            dashboardItems(
+                uiState, today, onOpenInvoice, onOpenBills, onOpenPromise,
+                onOpenContracts, onOpenProfile, onLogout,
+            )
         }
     } else {
         LazyVerticalGrid(
@@ -109,7 +140,10 @@ private fun DashboardContent(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            dashboardItems(uiState, today, onOpenInvoice, onOpenBills)
+            dashboardItems(
+                uiState, today, onOpenInvoice, onOpenBills, onOpenPromise,
+                onOpenContracts, onOpenProfile, onLogout,
+            )
         }
     }
 }
@@ -119,24 +153,48 @@ private fun LazyListScope.dashboardItems(
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
     onOpenBills: () -> Unit,
+    onOpenPromise: () -> Unit,
+    onOpenContracts: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onLogout: () -> Unit,
 ) {
-    item { ContractHeader(uiState) }
-
-    if (uiState.openInvoices.overdue.isNotEmpty()) {
-        item { OverdueBanner(uiState.openInvoices.overdue.size) }
+    item {
+        HeroCard(uiState, onOpenContracts, onLogout)
     }
 
-    item { OpenInvoicesHeader(onOpenBills) }
+    item {
+        QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
+    }
 
-    if (uiState.all.isEmpty()) {
-        item { OpenInvoicesEmpty() }
-    } else {
-        items(uiState.all, key = { it.id }) { invoice ->
+    item { InvoicesHeader() }
+
+    val current = uiState.currentInvoice
+    if (current != null) {
+        item {
+            CurrentInvoiceCard(
+                invoice = current,
+                today = today,
+                onClick = { onOpenInvoice(current.id) },
+            )
+        }
+        items(uiState.all.filter { it.id != current.id }, key = { it.id }) { invoice ->
             InvoiceSummaryCard(
                 invoice = invoice,
                 today = today,
                 onClick = { onOpenInvoice(invoice.id) },
             )
+        }
+    } else {
+        item { OpenInvoicesEmpty() }
+    }
+
+    item {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SgpPrimaryButton(text = "Histórico de pagamentos", onClick = onOpenBills)
+            SgpSecondaryButton(text = "Desbloqueio de confiança", onClick = onOpenPromise)
         }
     }
 }
@@ -146,79 +204,278 @@ private fun LazyGridScope.dashboardItems(
     today: LocalDate,
     onOpenInvoice: (Int) -> Unit,
     onOpenBills: () -> Unit,
+    onOpenPromise: () -> Unit,
+    onOpenContracts: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onLogout: () -> Unit,
 ) {
-    // Non-card elements (contract summary, banner, section header, empty
-    // state) stretch across all columns; invoice cards fill grid cells.
-    item(span = { GridItemSpan(maxLineSpan) }) { ContractHeader(uiState) }
-
-    if (uiState.openInvoices.overdue.isNotEmpty()) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            OverdueBanner(uiState.openInvoices.overdue.size)
-        }
+    // Non-card elements stretch across all columns; invoice cards fill cells.
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        HeroCard(uiState, onOpenContracts, onLogout)
     }
 
-    item(span = { GridItemSpan(maxLineSpan) }) { OpenInvoicesHeader(onOpenBills) }
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
+    }
 
-    if (uiState.all.isEmpty()) {
-        item(span = { GridItemSpan(maxLineSpan) }) { OpenInvoicesEmpty() }
-    } else {
-        items(uiState.all, key = { it.id }) { invoice ->
+    item(span = { GridItemSpan(maxLineSpan) }) { InvoicesHeader() }
+
+    val current = uiState.currentInvoice
+    if (current != null) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            CurrentInvoiceCard(
+                invoice = current,
+                today = today,
+                onClick = { onOpenInvoice(current.id) },
+            )
+        }
+        items(uiState.all.filter { it.id != current.id }, key = { it.id }) { invoice ->
             InvoiceSummaryCard(
                 invoice = invoice,
                 today = today,
                 onClick = { onOpenInvoice(invoice.id) },
             )
         }
+    } else {
+        item(span = { GridItemSpan(maxLineSpan) }) { OpenInvoicesEmpty() }
+    }
+
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SgpPrimaryButton(text = "Histórico de pagamentos", onClick = onOpenBills)
+            SgpSecondaryButton(text = "Desbloqueio de confiança", onClick = onOpenPromise)
+        }
     }
 }
 
+/** Colored hero: greeting + plan card + status/contract pills — mirrors the
+ * reference's full-tint header block. */
 @Composable
-private fun ContractHeader(uiState: DashboardUiState) {
-    uiState.contract?.let { contract ->
-        SgpCard {
+private fun HeroCard(
+    uiState: DashboardUiState,
+    onOpenContracts: () -> Unit,
+    onLogout: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Olá, ${uiState.session?.firstName ?: "cliente"}.",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onLogout) {
+                    Text("Sair", color = MaterialTheme.colorScheme.onPrimary)
+                }
+            }
+
+            uiState.contract?.let { contract ->
+                PlanCard(
+                    contract = contract,
+                    serviceStatus = uiState.serviceStatus,
+                    showSwitch = uiState.hasMultipleContracts,
+                    onOpenContracts = onOpenContracts,
+                )
+            }
+        }
+    }
+}
+
+/** White "Meu plano" card inside the colored hero. */
+@Composable
+private fun PlanCard(
+    contract: Contract,
+    serviceStatus: ServiceStatus?,
+    showSwitch: Boolean,
+    onOpenContracts: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.md)) {
             Text(
-                text = uiState.session?.customerName ?: contract.razaoSocial,
+                text = "Meu plano",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = contract.internetPlan ?: "Contrato ${contract.id}",
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Contrato ${contract.id}" +
-                    (contract.internetPlan?.let { " • $it" } ?: ""),
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Vencimento dia ${contract.dueDay}" +
+                    (contract.internetPlanValue?.let { " • ${MoneyFormatter.brl(it)}/mês" } ?: ""),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                serviceStatus?.let { status ->
+                    SgpStatusBadge(
+                        text = if (status.isOnline) "Você está online" else "Você está offline",
+                        kind = if (status.isOnline) SgpBadgeKind.PAID else SgpBadgeKind.OVERDUE,
+                    )
+                } ?: SgpStatusBadge(
+                    text = contract.status,
+                    kind = if (contract.isActive) SgpBadgeKind.PAID else SgpBadgeKind.NEUTRAL,
+                )
+                if (showSwitch) {
+                    Spacer(Modifier.weight(1f))
+                    SgpTextButton(text = "Trocar Contrato", onClick = onOpenContracts)
+                }
+            }
+        }
+    }
+}
+
+/** "Sobre sua conta" — three quick-action cards wired to real destinations. */
+@Composable
+private fun QuickActionsRow(
+    uiState: DashboardUiState,
+    onOpenInvoice: (Int) -> Unit,
+    onOpenBills: () -> Unit,
+    onOpenProfile: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
+        Text(
+            text = "Sobre sua conta",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            QuickActionCard(
+                icon = Icons.Filled.QrCode2,
+                label = "Pagar com PIX",
+                onClick = {
+                    uiState.currentInvoice?.let { onOpenInvoice(it.id) } ?: onOpenBills()
+                },
+                modifier = Modifier.weight(1f),
+            )
+            QuickActionCard(
+                icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                label = "Segunda via",
+                onClick = onOpenBills,
+                modifier = Modifier.weight(1f),
+            )
+            QuickActionCard(
+                icon = Icons.Filled.Person,
+                label = "Meus dados",
+                onClick = onOpenProfile,
+                modifier = Modifier.weight(1f),
             )
         }
     }
 }
 
 @Composable
-private fun OverdueBanner(overdueCount: Int) {
+private fun QuickActionCard(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Card(
+        onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
-        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier,
     ) {
-        Text(
-            text = "$overdueCount fatura(s) vencida(s) em aberto",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.padding(Spacing.md),
-        )
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(Spacing.xs).size(22.dp),
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+            )
+        }
     }
 }
 
 @Composable
-private fun OpenInvoicesHeader(onOpenBills: () -> Unit) {
-    Row(
+private fun InvoicesHeader() {
+    Text(
+        text = "Minhas faturas",
+        style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    )
+}
+
+/** Highlighted current invoice — tinted card like the reference's red card. */
+@Composable
+private fun CurrentInvoiceCard(invoice: Invoice, today: LocalDate, onClick: () -> Unit) {
+    val overdue = invoice.isOverdue(today)
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = "Faturas em aberto",
-            style = MaterialTheme.typography.titleSmall,
-        )
-        SgpTextButton(text = "Ver todas", onClick = onOpenBills)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    text = "Fatura atual",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = MoneyFormatter.brl(invoice.displayAmount),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = DateFormatter.display(invoice.effectiveOrOriginalDueDate),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            SgpStatusBadge(
+                text = if (overdue) "Vencida" else "Em aberto",
+                kind = if (overdue) SgpBadgeKind.OVERDUE else SgpBadgeKind.OPEN,
+            )
+        }
     }
 }
 
@@ -258,6 +515,11 @@ private fun InvoiceSummaryCard(invoice: Invoice, today: LocalDate, onClick: () -
         }
     }
 }
+
+private val CustomerSession.firstName: String
+    get() = customerName.trim().split("\\s+".toRegex()).firstOrNull()
+        ?.lowercase()?.replaceFirstChar { it.titlecase() }
+        ?: ""
 
 private fun previewInvoice(id: Int, dueDate: LocalDate) = Invoice(
     id = id,
@@ -301,6 +563,7 @@ private val previewUiState = DashboardUiState(
             previewInvoice(3, LocalDate.now().plusDays(20)),
         ),
     ),
+    serviceStatus = ServiceStatus(statusCode = 1, isOnline = true, message = "Online"),
 )
 
 @Preview(showBackground = true, widthDp = 412, heightDp = 915)
@@ -311,6 +574,10 @@ private fun DashboardContentCompactPreview() {
             uiState = previewUiState,
             onOpenInvoice = {},
             onOpenBills = {},
+            onOpenPromise = {},
+            onOpenContracts = {},
+            onOpenProfile = {},
+            onLogout = {},
         )
     }
 }
@@ -323,6 +590,10 @@ private fun DashboardContentGridPreview() {
             uiState = previewUiState,
             onOpenInvoice = {},
             onOpenBills = {},
+            onOpenPromise = {},
+            onOpenContracts = {},
+            onOpenProfile = {},
+            onLogout = {},
         )
     }
 }

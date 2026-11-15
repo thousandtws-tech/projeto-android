@@ -62,6 +62,7 @@ fun MainTabs(
     onOpenInvoice: (Int) -> Unit,
     onOpenPreferences: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenContracts: () -> Unit,
     viewModelStoreOwner: ViewModelStoreOwner,
     modifier: Modifier = Modifier,
     tabNavController: NavHostController = rememberNavController(),
@@ -110,6 +111,7 @@ fun MainTabs(
                 onOpenInvoice = onOpenInvoice,
                 onOpenPreferences = onOpenPreferences,
                 onOpenPrivacy = onOpenPrivacy,
+                onOpenContracts = onOpenContracts,
                 viewModelStoreOwner = viewModelStoreOwner,
                 contentPadding = innerPadding,
                 modifier = Modifier.fillMaxSize(),
@@ -136,6 +138,7 @@ fun MainTabs(
                 onOpenInvoice = onOpenInvoice,
                 onOpenPreferences = onOpenPreferences,
                 onOpenPrivacy = onOpenPrivacy,
+                onOpenContracts = onOpenContracts,
                 viewModelStoreOwner = viewModelStoreOwner,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -149,6 +152,7 @@ private fun MainTabsNavHost(
     onOpenInvoice: (Int) -> Unit,
     onOpenPreferences: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenContracts: () -> Unit,
     viewModelStoreOwner: ViewModelStoreOwner,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
@@ -177,6 +181,17 @@ private fun MainTabsNavHost(
                     onOpenInvoice = onOpenInvoice,
                     onOpenBills = {
                         tabNavController.navigate(TopLevelDestination.BILLS.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenPromise = {
+                        tabNavController.navigate(TopLevelDestination.PROMISES.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenContracts = onOpenContracts,
+                    onOpenProfile = {
+                        tabNavController.navigate(TopLevelDestination.PROFILE.route) {
                             launchSingleTop = true
                         }
                     },

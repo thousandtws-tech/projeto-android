@@ -5,6 +5,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
+- Redesenho do Dashboard inspirado na referência do provedor: hero colorido
+  com "Olá, {nome}." + "Sair", card "Meu plano" (plano, vencimento, pill de
+  status online/offline via `rede/status`, "Trocar Contrato" quando há
+  múltiplos), ações rápidas (Pagar com PIX / Segunda via / Meus dados),
+  card destacado "Fatura atual" e CTAs "Histórico de pagamentos" /
+  "Desbloqueio de confiança".
+- Seção "Pagar com PIX" no detalhe da fatura com instruções e campo de
+  código em borda tracejada (`Modifier.dashedBorder`).
 - Modernização Material 3 (m3 1.4.0): filtros de fatura migrados de
   `FilterChip` para `SingleChoiceSegmentedButtonRow` conectada;
   `SgpTooltipButton` (TooltipBox + PlainTooltip) aplicado a botões

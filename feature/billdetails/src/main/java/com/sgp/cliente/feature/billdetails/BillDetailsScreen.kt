@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
@@ -32,6 +33,7 @@ import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
 import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpCopyableValue
 import com.sgp.cliente.core.designsystem.components.SgpErrorView
+import com.sgp.cliente.core.designsystem.components.dashedBorder
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonBillDetails
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
@@ -177,11 +179,30 @@ private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsVi
         uiState.pixCode?.let { pix ->
             item {
                 SgpCard {
-                    SgpCopyableValue(
-                        label = "PIX copia e cola",
-                        value = pix,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text(
+                            text = "Pagar com PIX",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = "Copie o código abaixo e use o Pix Copia e Cola " +
+                                "no aplicativo do seu banco para fazer o pagamento.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        SgpCopyableValue(
+                            label = "PIX copia e cola",
+                            value = pix,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dashedBorder(
+                                    color = MaterialTheme.colorScheme.outline,
+                                    strokeWidth = 1.5.dp,
+                                    cornerRadius = 14.dp,
+                                )
+                                .padding(Spacing.sm),
+                        )
+                    }
                 }
             }
         }
