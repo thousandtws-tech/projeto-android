@@ -180,6 +180,14 @@ class CentralAppRemoteDataSource @Inject constructor(
         api.info(fields)
     }
 
+    /**
+     * Downloads a pre-signed boleto PDF (`titulo.link`, resolved to an
+     * absolute URL). Plain GET — the link carries its own token, so no
+     * `contrato` fields and no `callWithAuth` retry are needed.
+     */
+    suspend fun downloadBoleto(url: String): AppResult<ByteArray> =
+        safeApiCall { api.downloadFile(url).bytes() }
+
     // -- internals -------------------------------------------------------------
 
     /**

@@ -87,6 +87,13 @@ interface InvoiceRepository {
 
     /** `POST /api/centralapp/titulo/{id}/detail/` (with page-cache fallback). */
     suspend fun getInvoiceById(contractId: Int, invoiceId: Int): AppResult<Invoice>
+
+    /**
+     * Raw PDF bytes of the invoice boleto. [url] is the invoice's resolved
+     * `boletoPath` (`link`/`url_cobranca`) — a pre-signed GET on the same
+     * host, so no contract fields or auth retry are needed.
+     */
+    suspend fun getBoletoPdf(url: String): AppResult<ByteArray>
 }
 
 interface PaymentRepository {

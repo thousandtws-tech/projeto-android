@@ -37,6 +37,18 @@ class DemoModeInterceptor @Inject constructor(
             return response(chain.request(), 404, """{"detail":"no captcha"}""")
         }
 
+        // Boleto downloads (`link` in the canned invoices) answer with a
+        // minimal real PDF so the in-app viewer can render it offline.
+        if (path.endsWith(".pdf")) {
+            return Response.Builder()
+                .request(chain.request())
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body(DEMO_PDF.toResponseBody(PDF))
+                .build()
+        }
+
         val body = demoPayload(path, chain.request())
         return response(chain.request(), 200, body)
     }
@@ -106,6 +118,32 @@ class DemoModeInterceptor @Inject constructor(
         const val DEMO_HOST = "demo"
         private const val SIMULATED_LATENCY_MS = 400L
         private val JSON = "application/json; charset=utf-8".toMediaType()
+        private val PDF = "application/pdf".toMediaType()
+
+        /** Smallest one-page PDF PDFium will render (correct xref offsets). */
+        private val DEMO_PDF: ByteArray = run {
+            val text = "BT /F1 20 Tf 60 720 Td (BOLETO DEMO) Tj ET"
+            val objects = listOf(
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " +
+                    "/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+                "<< /Length ${text.length} >>\nstream\n$text\nendstream",
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            )
+            val sb = StringBuilder("%PDF-1.4\n")
+            val offsets = IntArray(objects.size + 1)
+            objects.forEachIndexed { i, obj ->
+                offsets[i + 1] = sb.length
+                sb.append("${i + 1} 0 obj\n$obj\nendobj\n")
+            }
+            val xref = sb.length
+            sb.append("xref\n0 ${objects.size + 1}\n0000000000 65535 f \n")
+            (1..objects.size).forEach { sb.append("%010d 00000 n \n".format(offsets[it])) }
+            sb.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\n")
+            sb.append("startxref\n$xref\n%%EOF\n")
+            sb.toString().toByteArray(Charsets.US_ASCII)
+        }
 
         private const val CENTRALS = """[
             {"id": 3, "nome": "Central do Assinante", "token": "demo-central-token"}

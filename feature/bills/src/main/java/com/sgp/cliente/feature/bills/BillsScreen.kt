@@ -73,7 +73,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -116,16 +115,13 @@ fun BillsScreen(
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
     val clipboard = LocalClipboardManager.current
-    val uriHandler = LocalUriHandler.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val onCopyValue: (String) -> Unit = {
         clipboard.setText(AnnotatedString(it))
         scope.launch { snackbar.showSnackbar("Código copiado") }
     }
-    val onOpenBoleto: (Invoice) -> Unit = { invoice ->
-        invoice.boletoPath?.let { runCatching { uriHandler.openUri(it) } }
-    }
+    val onOpenBoleto: (Invoice) -> Unit = viewModel::openBoleto
 
     // A generated PIX code arrives through state — copy it here, where the
     // clipboard lives, then consume the one-shot.
@@ -200,6 +196,19 @@ fun BillsScreen(
                 }
             }
         }
+    }
+
+    // In-app boleto viewer — downloads through the API client and renders
+    // with the platform PdfRenderer instead of an external browser.
+    uiState.boletoInvoice?.let { invoice ->
+        BoletoViewerDialog(
+            invoice = invoice,
+            pdf = uiState.boletoPdf,
+            loading = uiState.boletoLoading,
+            error = uiState.boletoError,
+            onRetry = { viewModel.openBoleto(invoice) },
+            onDismiss = viewModel::closeBoleto,
+        )
     }
 }
 

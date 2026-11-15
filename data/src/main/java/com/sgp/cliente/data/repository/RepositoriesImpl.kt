@@ -287,6 +287,10 @@ class InvoiceRepositoryImpl @Inject constructor(
         )
     }
 
+    /** Pre-signed `link` GET — no contract fields, no auth retry. */
+    override suspend fun getBoletoPdf(url: String): AppResult<ByteArray> =
+        remote.downloadBoleto(url)
+
     /** `link`/`chargeUrl` arrive relative to the API host — resolve once so
      * consumers can open the boleto without knowing the base URL. */
     private fun Invoice.withResolvedBoleto(): Invoice =

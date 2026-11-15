@@ -8,6 +8,7 @@ import com.sgp.cliente.core.common.logging.AppLog
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoicesUseCase
 import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,6 +37,12 @@ data class BillsUiState(
     val pixCodeToCopy: String? = null,
     /** One-shot action error surfaced as a snackbar. */
     val actionError: AppError? = null,
+    /** Invoice whose boleto PDF is shown in the in-app viewer. */
+    val boletoInvoice: Invoice? = null,
+    /** Downloaded boleto PDF bytes (rendered by the viewer). */
+    val boletoPdf: ByteArray? = null,
+    val boletoLoading: Boolean = false,
+    val boletoError: AppError? = null,
 ) {
     /** Competence label (e.g. `janeiro/2026`) → invoices, newest group first. */
     val grouped: List<Pair<String, List<Invoice>>> by lazy {
@@ -72,6 +79,7 @@ data class OpenSummary(
 class BillsViewModel @Inject constructor(
     private val getInvoices: GetInvoicesUseCase,
     private val generatePix: GeneratePixUseCase,
+    private val getBoletoPdf: GetBoletoPdfUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillsUiState())
@@ -187,6 +195,36 @@ class BillsViewModel @Inject constructor(
                 },
             )
         }
+    }
+
+    /**
+     * "Abrir boleto" / PIX-in-boleto on a card: fetch the pre-signed PDF
+     * through the API client and hand the bytes to the in-app viewer.
+     * Re-tapping the same invoice while it is open is a no-op.
+     */
+    fun openBoleto(invoice: Invoice) {
+        if (invoice.boletoPath == null) return
+        val state = _uiState.value
+        if (state.boletoInvoice?.id == invoice.id && (state.boletoLoading || state.boletoPdf != null)) {
+            return
+        }
+        _uiState.update {
+            it.copy(boletoInvoice = invoice, boletoPdf = null, boletoError = null, boletoLoading = true)
+        }
+        viewModelScope.launch {
+            getBoletoPdf(invoice).fold(
+                onSuccess = { bytes ->
+                    _uiState.update { it.copy(boletoPdf = bytes, boletoLoading = false) }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(boletoError = error, boletoLoading = false) }
+                },
+            )
+        }
+    }
+
+    fun closeBoleto() = _uiState.update {
+        it.copy(boletoInvoice = null, boletoPdf = null, boletoError = null, boletoLoading = false)
     }
 
     fun consumePixCodeToCopy() = _uiState.update { it.copy(pixCodeToCopy = null) }

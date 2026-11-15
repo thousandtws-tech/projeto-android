@@ -125,6 +125,21 @@ class GetSecondCopyUseCase @Inject constructor(
     }
 }
 
+/**
+ * Downloads the invoice boleto PDF for the in-app viewer. Providers may
+ * embed the PIX QR inside the boleto, so this is also the PIX path for
+ * invoices without `codigo_pix`/`pix_sob_demanda`.
+ */
+class GetBoletoPdfUseCase @Inject constructor(
+    private val invoiceRepository: InvoiceRepository,
+) {
+    suspend operator fun invoke(invoice: Invoice): AppResult<ByteArray> {
+        val url = invoice.boletoPath
+            ?: return AppResult.failure(AppError.Validation("Fatura sem boleto disponível"))
+        return invoiceRepository.getBoletoPdf(url)
+    }
+}
+
 class SendInvoiceCopyUseCase @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
     private val sessionRepository: SessionRepository,

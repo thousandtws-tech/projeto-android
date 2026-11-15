@@ -1,6 +1,7 @@
 package com.sgp.cliente.data.remote.centralapp
 
 import kotlinx.serialization.json.JsonElement
+import okhttp3.ResponseBody
 import retrofit2.http.FieldMap
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -8,6 +9,7 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 /**
  * Central App API (`/api/centralapp/`) — the endpoints used by the current
@@ -107,4 +109,12 @@ interface CentralAppApiService {
     @FormUrlEncoded
     @POST("api/centralapp/info/")
     suspend fun info(@FieldMap fields: Map<String, String>): CentralInfoDto
+
+    /**
+     * Raw download of a pre-signed resource on this host — invoice boleto
+     * PDFs (`link`/`url_cobranca` from `titulo`). Absolute `@Url` bypasses
+     * `baseUrl`; the auth interceptor only signs `/api/centralapp/` paths.
+     */
+    @GET
+    suspend fun downloadFile(@Url url: String): ResponseBody
 }

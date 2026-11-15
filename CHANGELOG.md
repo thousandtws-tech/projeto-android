@@ -15,9 +15,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   resposta da lista copia na hora; sem código mas com `pix_sob_demanda`,
   chama `GeneratePixUseCase` → `POST titulo/{id}/pix/` com spinner no
   card, copia o código gerado e mergea no estado (próximo toque copia
+  card, copia o código gerado e mergea no estado (próximo toque copia
   direto); falha vira snackbar de erro. Legenda honesta: "Pague agora" /
   "Gerar agora" / "No boleto" (provider embute o PIX no boleto — toque
   abre o PDF) / "Indisponível". Confirmação de cópia via snackbar.
+- Boleto abre dentro do app: `BoletoViewerDialog` baixa o PDF pelo
+  cliente HTTP da app (`CentralAppApiService.downloadFile` com `@Url`,
+  link pré-assinado do `titulo.link`) e renderiza as páginas com
+  `PdfRenderer` — sem browser externo nem download manual.
+  `GetBoletoPdfUseCase`/`InvoiceRepository.getBoletoPdf` com testes; modo
+  demo responde `*.pdf` com um PDF mínimo renderizável.
 - `Invoice.boletoPath` passa a chegar como URL absoluta (resolvida contra
   a base configurada no `InvoiceRepositoryImpl`) — a UI só abre, sem
   conhecer o host.
