@@ -44,18 +44,12 @@ object NetworkModule {
         .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .apply {
-            // Flavor-contributed interceptors (e.g. dev demo mode) run first so
-            // they can short-circuit before any real network/logging.
             extraInterceptors.forEach(::addInterceptor)
         }
         .addInterceptor(baseUrlInterceptor)
         .addInterceptor(loggingInterceptor)
         .build()
 
-    /**
-     * The base URL is a placeholder rewritten per-request by
-     * [BaseUrlInterceptor] using the configured instance.
-     */
     @Provides
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, json: Json): Retrofit =
@@ -65,8 +59,6 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
 }
-
-/** Declares the (possibly empty) set of flavor-contributed OkHttp interceptors. */
 @Module
 @InstallIn(SingletonComponent::class)
 interface ExtraInterceptorsModule {

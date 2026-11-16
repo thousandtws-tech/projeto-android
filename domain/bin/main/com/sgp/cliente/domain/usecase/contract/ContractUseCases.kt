@@ -26,11 +26,12 @@ class GetContractsUseCase @Inject constructor(
 }
 
 /**
- * Open-invoice count per contract (`titulo/list` grupo=abertos), for the
- * contract picker: only contracts with an open/generated boleto should be
- * offered for payment. Probes run in parallel; a failed probe maps to
- * `null` so the caller keeps the contract visible rather than hiding it
- * on a transient error.
+ * Open-invoice count per contract for the contract picker: only contracts
+ * with an open/generated boleto (`situacao` aberta/atrasada, filtered
+ * client-side — the server's `grupo=abertos` is only the payable-now
+ * subset) should be offered for payment. Probes run in parallel; a failed
+ * probe maps to `null` so the caller keeps the contract visible rather
+ * than hiding it on a transient error.
  */
 class GetContractOpenBillCountsUseCase @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
@@ -40,11 +41,21 @@ class GetContractOpenBillCountsUseCase @Inject constructor(
             contracts.map { contract ->
                 async {
                     contract.id to invoiceRepository
-                        .getInvoices(contractId = contract.id, statusFilter = InvoiceStatus.OPEN.apiId, limit = 1)
+                        .getInvoices(
+                            contractId = contract.id,
+                            statusFilter = InvoiceStatus.OPEN.apiId,
+                            limit = PROBE_LIMIT,
+                        )
                         .fold(onSuccess = { it.items.size }, onFailure = { null })
                 }
             }.awaitAll().toMap()
         }
+
+    private companion object {
+        /** First-page window — a contract with open titulos beyond it is
+         * unrealistic for the picker use case. */
+        const val PROBE_LIMIT = 250
+    }
 }
 
 class SelectContractUseCase @Inject constructor(

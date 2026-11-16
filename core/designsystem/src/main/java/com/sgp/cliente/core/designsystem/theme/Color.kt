@@ -2,8 +2,6 @@ package com.sgp.cliente.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brand palette — cobalt blue + white (Figma "alternativa+" marca tokens).
-// marca/blue #2458F4 · marca/tint #E9EEFF · marca/ink #111B35
 internal val Brand10 = Color(0xFF0A1F80)
 internal val Brand20 = Color(0xFF0F2DB3)
 internal val Brand30 = Color(0xFF1740D6)
@@ -30,10 +28,8 @@ internal val Error40 = Color(0xFFBA1A1A)
 internal val Error80 = Color(0xFFFFB4AB)
 internal val Error90 = Color(0xFFFFDAD6)
 
-// Deep brand tone — status pills/accents over the primary hero (fixed pair with white).
 val BrandDeep = Brand30
 
-// Semantic invoice status colors.
 val StatusPaid = Color(0xFF1E7F4F)
 val StatusPaidContainer = Color(0xFFBDEDD2)
 val StatusOpen = Color(0xFF2458F4)

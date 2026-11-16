@@ -8,9 +8,15 @@ data class PagedResult<T>(
     val offset: Int,
     val limit: Int,
     val total: Int,
+    /**
+     * Rows the server stream actually produced for this page — larger than
+     * `items.size` when a client-side filter dropped entries, so pagination
+     * keeps walking the raw stream instead of stalling on filtered counts.
+     */
+    val consumed: Int = items.size,
 ) {
-    val hasMore: Boolean get() = offset + items.size < total
-    val nextOffset: Int get() = offset + items.size
+    val hasMore: Boolean get() = offset + consumed < total
+    val nextOffset: Int get() = offset + consumed
 }
 
 /** Result of `POST /api/centralapp/titulo/{id}/pix/`. */

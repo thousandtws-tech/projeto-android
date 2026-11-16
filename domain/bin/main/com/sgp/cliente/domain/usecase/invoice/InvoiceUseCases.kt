@@ -3,6 +3,7 @@ package com.sgp.cliente.domain.usecase.invoice
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.core.common.result.map
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.PagedResult
@@ -56,7 +57,8 @@ class GetOpenInvoicesUseCase @Inject constructor(
 
 /**
  * Paged invoice listing (`POST /api/centralapp/titulo/list/`).
- * [statusFilter] null keeps the API default (open + paid).
+ * [statusFilter] is applied client-side over the `todas` stream — the
+ * server's `grupo` values cannot express "all open" or "cancelled".
  */
 class GetInvoicesUseCase @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
@@ -126,17 +128,17 @@ class GetSecondCopyUseCase @Inject constructor(
 }
 
 /**
- * Downloads the invoice boleto PDF for the in-app viewer. Providers may
- * embed the PIX QR inside the boleto, so this is also the PIX path for
- * invoices without `codigo_pix`/`pix_sob_demanda`.
+ * Downloads the invoice boleto for the in-app viewer: locally generated
+ * boletos arrive as PDF; "formato banco" links answer a bank HTML page
+ * ([BoletoContent.ExternalPage]) rendered in a web view.
  */
-class GetBoletoPdfUseCase @Inject constructor(
+class GetBoletoUseCase @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
 ) {
-    suspend operator fun invoke(invoice: Invoice): AppResult<ByteArray> {
+    suspend operator fun invoke(invoice: Invoice): AppResult<BoletoContent> {
         val url = invoice.boletoPath
             ?: return AppResult.failure(AppError.Validation("Fatura sem boleto disponível"))
-        return invoiceRepository.getBoletoPdf(url)
+        return invoiceRepository.getBoleto(url)
     }
 }
 

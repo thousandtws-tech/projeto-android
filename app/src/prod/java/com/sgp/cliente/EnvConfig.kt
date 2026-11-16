@@ -1,14 +1,19 @@
 package com.sgp.cliente
 
 /**
- * Production flavor defaults pointing at the public SGP demo instance.
- * Distribution builds for a specific provider should set that provider's
- * public SGP base URL and its Central App (id + token listed by
- * `GET /api/centralapp/list/` — the value the provider sends as
- * `X-TOKEN` on every `/api/centralapp/` call).
+ * Production flavor defaults pointing at the provider's SGP instance
+ * (J D FIBRA — Central do Assinante app "testesgp").
+ *
+ * The tenant's `GET /api/centralapp/list/` answers `[]` (no public
+ * centrals), so first-run discovery can't pick the app — the token is
+ * seeded here instead. It's the value the provider sends as `X-TOKEN`
+ * on every `/api/centralapp/` call; verified live against `login/` +
+ * `captcha/challenge`. The numeric id is only bookkeeping — no request
+ * carries it (`config/{id}` doesn't exist on this SGP version) — so it
+ * stays 0 until the provider reports the real one.
  */
 object EnvConfig {
-    const val DEFAULT_BASE_URL: String = "https://demo.sgp.net.br"
-    const val DEFAULT_CENTRAL_ID: Int = 3
-    const val DEFAULT_CENTRAL_TOKEN: String = ""
+    const val DEFAULT_BASE_URL: String = "https://jdfibra.sgp.tsmx.com.br"
+    const val DEFAULT_CENTRAL_ID: Int = 0
+    const val DEFAULT_CENTRAL_TOKEN: String = "ade8f0ef-c27c-43aa-9a5d-6a96af1823eb"
 }

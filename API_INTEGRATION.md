@@ -1,4 +1,4 @@
-# Integração com a API SGP
+# Integração API SGP
 
 O app consome **`/api/centralapp/`** — a mesma API usada pela Central do
 Assinante web oficial (verificada inspecionando o bundle da Central e
@@ -97,13 +97,6 @@ Campos: `contrato`, `servico`, `mes`, `ano` → `{extrato: {itens, total}}`.
 
 - `grupo=vencidos` pode responder **HTML com HTTP 200** em contratos sem
   faturas — o app não usa esse grupo; se usar, tratar como resposta vazia.
-- PIX indisponível no `demo.sgp.net.br` (gateway não configurado) —
   contrato confirmado, comportamento em produção depende do gateway.
 - Respostas podem vir como array nu ou envelopadas (`result`/`itens`) —
   `unwrapArray()` tolera ambas.
-
-## Fora de escopo (v1)
-
-- `centralapp/` extras (`avisos`, `alterarsenha`, `assinaturas`, `cartoes`,
-  `ocorrencia/*`) — sem UI em v1.
-- `/api/central/chamado/*` — fase de chamados de suporte.

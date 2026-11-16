@@ -3,6 +3,7 @@ package com.sgp.cliente.feature.bills
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.domain.model.Invoice
+import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.PagedResult
 import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
@@ -65,6 +66,14 @@ class BillsViewModelTest {
 
     @After
     fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun `bills are always fetched with the paid status filter`() = runTest {
+        viewModel = viewModel(listOf(invoice()))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { getInvoices(InvoiceStatus.PAID, 0, any(), true) }
+    }
 
     @Test
     fun `openBoleto downloads the pdf and close clears the viewer state`() = runTest {

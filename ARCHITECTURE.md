@@ -2,7 +2,7 @@
 
 ## Visão geral
 
-Clean Architecture de 3 camadas sobre módulos Gradle, MVVM na apresentação,
+Architecture de 3 camadas sobre módulos Gradle, MVVM na apresentação,
 UDF com StateFlow, DI com Hilt, Kotlin Coroutines em tudo que é assíncrono.
 
 ```

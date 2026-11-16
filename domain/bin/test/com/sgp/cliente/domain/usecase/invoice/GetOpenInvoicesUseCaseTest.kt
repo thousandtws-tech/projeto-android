@@ -2,6 +2,7 @@ package com.sgp.cliente.domain.usecase.invoice
 
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
@@ -76,6 +77,9 @@ private class FakeInvoiceRepository(
         invoices.firstOrNull { it.id == invoiceId }
             ?.let { AppResult.success(it) }
             ?: AppResult.failure(AppError.NotFound)
+
+    override suspend fun getBoleto(url: String): AppResult<BoletoContent> =
+        AppResult.failure(AppError.Api("not implemented"))
 }
 
 class GetOpenInvoicesUseCaseTest {

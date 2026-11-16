@@ -5,6 +5,7 @@ import com.sgp.cliente.domain.model.CentralOption
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PagedResult
 import com.sgp.cliente.domain.model.PaymentPromise
@@ -63,8 +64,10 @@ interface ContractRepository {
 interface InvoiceRepository {
     /**
      * `POST /api/centralapp/titulo/list/`.
-     * [statusFilter] uses the SGP codes (1=aberto, 2=pago, 3=cancelado);
-     * they map to the API `grupo` values (abertos/pagos/todos).
+     * [statusFilter] uses the SGP codes (1=aberto, 2=pago, 3=cancelado) and
+     * is applied client-side — the server's `grupo` values cannot express
+     * them (`abertos` is only the payable-now subset; `canceladas` is
+     * ignored), so the raw `todas` stream is paged and filtered locally.
      */
     suspend fun getInvoices(
         contractId: Int,
@@ -89,11 +92,12 @@ interface InvoiceRepository {
     suspend fun getInvoiceById(contractId: Int, invoiceId: Int): AppResult<Invoice>
 
     /**
-     * Raw PDF bytes of the invoice boleto. [url] is the invoice's resolved
-     * `boletoPath` (`link`/`url_cobranca`) — a pre-signed GET on the same
-     * host, so no contract fields or auth retry are needed.
+     * Invoice boleto content. [url] is the invoice's resolved `boletoPath`
+     * (`link`) — a pre-signed GET on the same host, so no contract fields
+     * or auth retry are needed. Local boletos arrive as PDF; "formato
+     * banco" links answer a bank HTML page → [BoletoContent.ExternalPage].
      */
-    suspend fun getBoletoPdf(url: String): AppResult<ByteArray>
+    suspend fun getBoleto(url: String): AppResult<BoletoContent>
 }
 
 interface PaymentRepository {

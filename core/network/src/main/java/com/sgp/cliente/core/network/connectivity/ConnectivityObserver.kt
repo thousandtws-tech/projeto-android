@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
-
-/** Emits `true` while a validated internet connection exists. */
 @Singleton
 class ConnectivityObserver @Inject constructor(
     @ApplicationContext context: Context,

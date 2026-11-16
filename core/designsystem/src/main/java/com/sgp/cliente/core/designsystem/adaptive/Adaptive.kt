@@ -16,7 +16,6 @@ import com.sgp.cliente.core.designsystem.theme.LayoutTokens
 private const val WIDTH_MEDIUM_MIN_DP = 600
 private const val WIDTH_EXPANDED_MIN_DP = 840
 
-/** Centered content column capped at [LayoutTokens.contentMaxWidth] on wide screens. */
 @Composable
 fun SgpContentFrame(
     modifier: Modifier = Modifier,
@@ -30,23 +29,12 @@ fun SgpContentFrame(
     }
 }
 
-/** Grid column count driven by the window width class. */
 fun gridColumns(widthSizeClass: WindowWidthSizeClass): Int = when (widthSizeClass) {
     WindowWidthSizeClass.Compact -> 1
     WindowWidthSizeClass.Medium -> 2
     else -> 3
 }
 
-/**
- * [WindowWidthSizeClass] of the app's current window, derived from
- * [LocalConfiguration.screenWidthDp] using the standard M3 breakpoints
- * (Compact < 600dp, Medium 600–839dp, Expanded ≥ 840dp).
- *
- * Feature modules do not depend on `material3-adaptive` (and its
- * `currentWindowAdaptiveInfoV2()`), so this is the shared idiom for
- * width-driven layout decisions. It recomposes on rotation and
- * multi-window resizes and honors `widthDp` in @Preview.
- */
 @Composable
 fun currentWindowWidthSizeClass(): WindowWidthSizeClass {
     val widthDp = LocalConfiguration.current.screenWidthDp

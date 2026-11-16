@@ -4,12 +4,6 @@ import javax.inject.Inject
 import okhttp3.Interceptor
 import okhttp3.Response
 
-/**
- * Rewrites every outgoing request onto the current SGP instance
- * ([BaseUrlProvider]). API paths are absolute (`/api/centralapp/...`) so the
- * original request URL only acts as a template; scheme/host/port and any
- * base path prefix are replaced by the configured instance URL.
- */
 class BaseUrlInterceptor @Inject constructor(
     private val baseUrlProvider: BaseUrlProvider,
 ) : Interceptor {

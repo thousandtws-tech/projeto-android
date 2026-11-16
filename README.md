@@ -1,7 +1,7 @@
 # SGP Cliente — Android
 
 Aplicativo Android nativo da **Central do Assinante** para clientes de provedores
-de internet que usam o sistema **SGP**. Interface 100% Jetpack Compose + Material 3,
+de internet que usam o sistema **SGP**. Interface Jetpack Compose + Material 3,
 arquitetura multi-módulo Clean Architecture + MVVM.
 
 ## Funcionalidades

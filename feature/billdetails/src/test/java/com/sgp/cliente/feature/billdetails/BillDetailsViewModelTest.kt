@@ -5,11 +5,13 @@ import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
+import com.sgp.cliente.domain.model.PixCharge
 import com.sgp.cliente.domain.model.SendChannel
 import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
+import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -36,6 +38,7 @@ class BillDetailsViewModelTest {
     private val getDetails: GetInvoiceDetailsUseCase = mockk()
     private val getBoleto: GetBoletoUseCase = mockk()
     private val sendCopy: SendInvoiceCopyUseCase = mockk()
+    private val generatePix: GeneratePixUseCase = mockk()
     private val requestPaymentPromise: RequestPaymentPromiseUseCase = mockk()
     private lateinit var viewModel: BillDetailsViewModel
 
@@ -72,7 +75,14 @@ class BillDetailsViewModelTest {
         } else {
             SavedStateHandle(mapOf("invoiceId" to invoiceId))
         }
-        return BillDetailsViewModel(handle, getDetails, getBoleto, sendCopy, requestPaymentPromise)
+        return BillDetailsViewModel(
+            handle,
+            getDetails,
+            getBoleto,
+            generatePix,
+            sendCopy,
+            requestPaymentPromise,
+        )
     }
 
     private fun stubLoaded(invoice: Invoice) {
@@ -196,6 +206,52 @@ class BillDetailsViewModelTest {
 
         assertFalse(viewModel.uiState.value.boletoOpen)
         coVerify(exactly = 0) { getBoleto(any()) }
+    }
+
+    @Test
+    fun `generatePix exposes the copy-paste code on the invoice`() = runTest {
+        stubLoaded(invoice().copy(canGeneratePix = true))
+        coEvery { generatePix(42) } returns
+            AppResult.success(PixCharge(status = 1, message = "ok", code = "000201-pix"))
+        viewModel = viewModel(42)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.generatePix()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.generatingPix)
+        assertNull(state.actionError)
+        assertEquals("000201-pix", state.invoice?.pixCode)
+        coVerify(exactly = 1) { generatePix(42) }
+    }
+
+    @Test
+    fun `generatePix is skipped when the contract does not allow it`() = runTest {
+        stubLoaded(invoice().copy(canGeneratePix = false))
+        viewModel = viewModel(42)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.generatePix()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 0) { generatePix(any()) }
+    }
+
+    @Test
+    fun `generatePix failure surfaces the action error`() = runTest {
+        stubLoaded(invoice().copy(canGeneratePix = true))
+        coEvery { generatePix(42) } returns AppResult.failure(AppError.Api("PIX indisponível"))
+        viewModel = viewModel(42)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.generatePix()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.generatingPix)
+        assertNull(state.invoice?.pixCode)
+        assertEquals(AppError.Api("PIX indisponível"), state.actionError)
     }
 
     @Test

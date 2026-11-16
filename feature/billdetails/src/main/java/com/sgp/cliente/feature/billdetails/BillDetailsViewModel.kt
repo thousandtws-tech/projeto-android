@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
+import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.PaymentPromise
 import com.sgp.cliente.domain.model.SendChannel
 import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
+import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -24,6 +26,7 @@ import kotlinx.coroutines.launch
 data class BillDetailsUiState(
     val loading: Boolean = true,
     val invoice: Invoice? = null,
+    val generatingPix: Boolean = false,
     val sendingCopy: Boolean = false,
     val requestingPromise: Boolean = false,
     val sentCopyMessage: String? = null,
@@ -41,6 +44,7 @@ class BillDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getDetails: GetInvoiceDetailsUseCase,
     private val getBoleto: GetBoletoUseCase,
+    private val generatePix: GeneratePixUseCase,
     private val sendCopy: SendInvoiceCopyUseCase,
     private val requestPaymentPromise: RequestPaymentPromiseUseCase,
 ) : ViewModel() {
@@ -108,6 +112,38 @@ class BillDetailsViewModel @Inject constructor(
             boletoError = null,
             boletoLoading = false,
         )
+    }
+
+    /**
+     * "Pagar com PIX" on an open invoice whose contract allows on-demand
+     * charges: the generated copia-e-cola code replaces `invoice.pixCode`
+     * so the sheet shows it as a copyable value.
+     */
+    fun generatePix() {
+        val invoice = _uiState.value.invoice ?: return
+        if (invoice.status != InvoiceStatus.OPEN ||
+            !invoice.canGeneratePix ||
+            invoice.pixCode != null ||
+            _uiState.value.generatingPix
+        ) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(generatingPix = true, actionError = null) }
+            generatePix(invoice.id).fold(
+                onSuccess = { charge ->
+                    _uiState.update { state ->
+                        state.copy(
+                            generatingPix = false,
+                            invoice = state.invoice?.copy(pixCode = charge.code),
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(generatingPix = false, actionError = error) }
+                },
+            )
+        }
     }
 
     fun sendCopyByEmail() = send(SendChannel.EMAIL)

@@ -5,11 +5,6 @@ import javax.inject.Inject
 import okhttp3.Interceptor
 import okhttp3.Response
 
-/**
- * Logs request method, path, response code and latency.
- * NEVER logs headers, query params or bodies — SGP requests carry
- * cpfcnpj/senha/token as form fields.
- */
 class SanitizedLoggingInterceptor @Inject constructor() : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {

@@ -29,6 +29,9 @@ data class Invoice(
     val canGeneratePix: Boolean,
     /** Absolute boleto URL (`link`), resolved against the API base URL at ingest. */
     val boletoPath: String?,
+    /** Public checkout page (`url_cobranca`) — the provider's payment hub
+     * where PIX/card payment happens when no inline artifact exists. */
+    val paymentUrl: String? = null,
 ) {
     val status: InvoiceStatus
         get() = InvoiceStatus.fromId(statusId)
@@ -59,4 +62,14 @@ enum class InvoiceStatus(val apiId: Int) {
     companion object {
         fun fromId(id: Int): InvoiceStatus = entries.firstOrNull { it.apiId == id } ?: UNKNOWN
     }
+}
+
+/**
+ * What an invoice `link` actually serves — providers emit both shapes:
+ * a locally generated PDF or a bank-hosted boleto page (HTML). The UI
+ * renders the first in-app and opens the second in a web view.
+ */
+sealed interface BoletoContent {
+    class Pdf(val bytes: ByteArray) : BoletoContent
+    class ExternalPage(val url: String) : BoletoContent
 }

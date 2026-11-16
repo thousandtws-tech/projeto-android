@@ -8,10 +8,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 
-/**
- * Runs a Retrofit call and maps failures into typed [AppError]s.
- * Suspension cancellation is re-thrown untouched.
- */
 suspend fun <T> safeApiCall(block: suspend () -> T): AppResult<T> =
     try {
         AppResult.success(block())
@@ -41,6 +37,5 @@ private fun HttpException.toAppError(): AppError = when (code()) {
     else -> AppError.Unknown(this)
 }
 
-/** Reads a small excerpt of the error body; never throws while parsing errors. */
 private fun okhttp3.ResponseBody?.safeMessage(): String? =
     runCatching { this?.string()?.take(300)?.takeIf { it.isNotBlank() } }.getOrNull()

@@ -6,12 +6,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-/**
- * Holds the effective SGP base URL. Source order:
- * persisted override (settings) -> flavor default (injected at startup).
- * Read by [BaseUrlInterceptor] on every request so a settings change
- * applies without rebuilding the Retrofit graph.
- */
 @Singleton
 class BaseUrlProvider @Inject constructor() {
 

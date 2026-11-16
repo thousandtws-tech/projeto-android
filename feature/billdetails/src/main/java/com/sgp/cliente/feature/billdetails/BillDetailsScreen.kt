@@ -186,6 +186,24 @@ private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsVi
             }
         }
 
+        invoice.pixCode?.let { pix ->
+            SgpCard {
+                SgpCopyableValue(
+                    label = "PIX copia e cola",
+                    value = pix,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        if (isOpen && invoice.pixCode == null && invoice.canGeneratePix) {
+            SgpPrimaryButton(
+                text = "Gerar código PIX",
+                onClick = viewModel::generatePix,
+                loading = uiState.generatingPix,
+            )
+        }
+
         invoice.barcode?.let { barcode ->
             SgpCard {
                 SgpCopyableValue(
