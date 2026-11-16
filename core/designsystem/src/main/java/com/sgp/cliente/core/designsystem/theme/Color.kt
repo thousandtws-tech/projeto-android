@@ -2,15 +2,24 @@ package com.sgp.cliente.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
-internal val Brand10 = Color(0xFF0A1F80)
-internal val Brand20 = Color(0xFF0F2DB3)
-internal val Brand30 = Color(0xFF1740D6)
-internal val Brand40 = Color(0xFF2458F4)
-internal val Brand50 = Color(0xFF4670FF)
-internal val Brand80 = Color(0xFFB4C4FF)
-internal val Brand90 = Color(0xFFDCE1FF)
-internal val Brand95 = Color(0xFFE9EEFF)
-internal val BrandInk = Color(0xFF111B35)
+// Official J D FIBRA brand palette.
+val BrandNavy = Color(0xFF061A4A)     // azul-marinho — identidade/fundos principais
+val BrandRoyal = Color(0xFF005BFF)    // azul royal — destaques, botões, títulos
+val BrandElectric = Color(0xFF008CFF) // azul elétrico — luzes, contornos, efeitos
+val BrandCyan = Color(0xFF00D9FF)     // ciano — detalhes, ícones, chamadas
+val BrandSky = Color(0xFF7ADFFF)      // azul-claro — degradês, elementos secundários
+val BrandInkDark = Color(0xFF050B18)  // preto azulado — sombras, fundos escuros
+
+// Tonal ramp built on the official hues (dark → light).
+internal val Brand10 = BrandInkDark
+internal val Brand20 = BrandNavy
+internal val Brand30 = Color(0xFF033EAE)
+internal val Brand40 = BrandRoyal
+internal val Brand50 = BrandElectric
+internal val Brand80 = BrandSky
+internal val Brand90 = Color(0xFFC9F0FF)
+internal val Brand95 = Color(0xFFEAF9FF)
+internal val BrandInk = BrandNavy
 
 internal val Slate05 = Color(0xFF060B10)
 internal val Slate10 = Color(0xFF0D151C)
@@ -28,12 +37,12 @@ internal val Error40 = Color(0xFFBA1A1A)
 internal val Error80 = Color(0xFFFFB4AB)
 internal val Error90 = Color(0xFFFFDAD6)
 
-val BrandDeep = Brand30
+val BrandDeep = BrandNavy
 
 val StatusPaid = Color(0xFF1E7F4F)
 val StatusPaidContainer = Color(0xFFBDEDD2)
-val StatusOpen = Color(0xFF2458F4)
-val StatusOpenContainer = Color(0xFFE9EEFF)
+val StatusOpen = BrandRoyal
+val StatusOpenContainer = Brand95
 val StatusOverdue = Color(0xFFB3261E)
 val StatusOverdueContainer = Color(0xFFF9DEDC)
 val StatusCancelled = Color(0xFF5F6368)

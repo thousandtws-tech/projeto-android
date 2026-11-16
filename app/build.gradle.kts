@@ -40,8 +40,8 @@ android {
         applicationId = "com.sgp.cliente"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 4
+        versionName = "0.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

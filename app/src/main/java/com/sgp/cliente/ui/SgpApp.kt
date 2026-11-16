@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.sgp.cliente.EnvConfig
 import com.sgp.cliente.MainViewModel
 import com.sgp.cliente.R
 import com.sgp.cliente.core.designsystem.components.SgpLoadingView
@@ -95,6 +96,7 @@ fun SgpApp(
                 SessionState.Loading -> SgpLoadingView(Modifier.fillMaxSize())
                 else -> LoginScreen(
                     onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
+                    supportWhatsApp = EnvConfig.SUPPORT_WHATSAPP,
                 )
             }
         }

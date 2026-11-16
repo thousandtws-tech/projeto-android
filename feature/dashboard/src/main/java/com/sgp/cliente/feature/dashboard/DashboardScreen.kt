@@ -260,7 +260,7 @@ private fun HeroCard(
 ) {
     val shape = RoundedCornerShape(28.dp)
     Surface(
-        color = MaterialTheme.colorScheme.primary,
+        color = BrandDeep,
         shape = shape,
         modifier = Modifier.fillMaxWidth().clip(shape),
     ) {
@@ -338,9 +338,10 @@ private fun PlanBlock(
             fontWeight = FontWeight.Bold,
             color = onPrimary,
         )
+        // The plan's catalog value isn't what the subscriber pays —
+        // real amounts live in the invoice card below (titulo.valortotal).
         Text(
-            text = "Vencimento dia ${contract.dueDay}" +
-                (contract.internetPlanValue?.let { " • ${MoneyFormatter.brl(it)}/mês" } ?: ""),
+            text = "Vencimento dia ${contract.dueDay}",
             style = MaterialTheme.typography.bodySmall,
             color = onPrimary.copy(alpha = 0.85f),
         )

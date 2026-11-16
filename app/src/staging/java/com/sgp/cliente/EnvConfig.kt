@@ -11,4 +11,5 @@ object EnvConfig {
     const val DEFAULT_BASE_URL: String = "https://demo.sgp.net.br"
     const val DEFAULT_CENTRAL_ID: Int = 3
     const val DEFAULT_CENTRAL_TOKEN: String = ""
+    const val SUPPORT_WHATSAPP: String = ""
 }

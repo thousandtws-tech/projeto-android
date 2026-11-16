@@ -16,4 +16,12 @@ object EnvConfig {
     const val DEFAULT_BASE_URL: String = "https://jdfibra.sgp.tsmx.com.br"
     const val DEFAULT_CENTRAL_ID: Int = 0
     const val DEFAULT_CENTRAL_TOKEN: String = "ade8f0ef-c27c-43aa-9a5d-6a96af1823eb"
+
+    /**
+     * Provider support WhatsApp in wa.me format (country + area + number,
+     * digits only — e.g. "5573991234567"). The login screen's "esqueci o
+     * acesso" link and the "Contratar" tab deep-link into this chat; leave
+     * blank to hide both.
+     */
+    const val SUPPORT_WHATSAPP: String = "5571988529584"
 }

@@ -8,16 +8,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
-    primary = Brand40,
+    primary = BrandNavy,
     onPrimary = Slate99,
-    primaryContainer = Brand95,
-    onPrimaryContainer = BrandInk,
-    secondary = Brand50,
+    primaryContainer = BrandSky,
+    onPrimaryContainer = BrandInkDark,
+    secondary = BrandRoyal,
     onSecondary = Slate99,
     secondaryContainer = Brand90,
     onSecondaryContainer = BrandInk,
-    tertiary = Brand30,
-    onTertiary = Slate99,
+    tertiary = BrandCyan,
+    onTertiary = BrandInkDark,
     error = Error40,
     onError = Slate99,
     errorContainer = Error90,
@@ -36,20 +36,20 @@ private val LightColors = lightColorScheme(
     outline = Slate40,
     inverseSurface = Slate10,
     inverseOnSurface = Slate95,
-    inversePrimary = Brand80,
+    inversePrimary = BrandSky,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Brand80,
-    onPrimary = Brand10,
+    primary = BrandSky,
+    onPrimary = BrandInkDark,
     primaryContainer = Brand30,
     onPrimaryContainer = Brand95,
-    secondary = Brand80,
-    onSecondary = Brand10,
+    secondary = BrandElectric,
+    onSecondary = Slate99,
     secondaryContainer = Brand20,
     onSecondaryContainer = Brand95,
-    tertiary = Brand80,
-    onTertiary = Brand10,
+    tertiary = BrandCyan,
+    onTertiary = BrandInkDark,
     error = Error80,
     onError = Error40,
     errorContainer = Error40,
@@ -68,7 +68,7 @@ private val DarkColors = darkColorScheme(
     outline = Slate60,
     inverseSurface = Slate95,
     inverseOnSurface = Slate10,
-    inversePrimary = Brand40,
+    inversePrimary = BrandNavy,
 )
 
 /**
