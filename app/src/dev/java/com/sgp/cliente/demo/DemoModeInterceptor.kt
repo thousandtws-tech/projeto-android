@@ -107,8 +107,8 @@ class DemoModeInterceptor @Inject constructor(
         }.getOrNull()
     }
 
-    // Contract 102 is suspended and has no open boletos — used by the
-    // contract picker filter.
+    // Contract 102 is suspended (hidden by the active-only picker) and
+    // has no boletos; 103 is a second active one at another address.
     private fun invoices(group: String?, contractId: String?): String = when {
         contractId == "102" -> "[]"
         group == "pagos" -> """[$INVOICE_PAID_1,$INVOICE_PAID_2]"""
@@ -172,6 +172,7 @@ class DemoModeInterceptor @Inject constructor(
             {"id": 101, "descricao": "Contrato residencial",
              "cliente_nome": "Cliente Demo", "cliente_cpfcnpj": "52998224725",
              "situacao": "Ativo", "vencimento": 10, "valor": 119.9,
+             "endereco_linha_0": "Rua das Flores, 123 - Centro",
              "servicos": [
                 {"id": 501, "plano": "Fibra 300 Mega", "grupo": "internet",
                  "situacao": "Ativo", "valor": 119.9}
@@ -179,9 +180,18 @@ class DemoModeInterceptor @Inject constructor(
             {"id": 102, "descricao": "Contrato antigo",
              "cliente_nome": "Cliente Demo", "cliente_cpfcnpj": "52998224725",
              "situacao": "Suspenso", "vencimento": 20,
+             "endereco_linha_0": "Av. Brasil, 500 - Bairro Alto",
              "servicos": [
                 {"id": 502, "plano": "Fibra 100 Mega", "grupo": "internet",
                  "situacao": "Suspenso", "valor": 89.9}
+             ]},
+            {"id": 103, "descricao": "Contrato loja",
+             "cliente_nome": "Cliente Demo", "cliente_cpfcnpj": "52998224725",
+             "situacao": "Ativo", "vencimento": 15, "valor": 149.9,
+             "endereco_linha_0": "Rua do Comércio, 77 - Vila Nova",
+             "servicos": [
+                {"id": 503, "plano": "Fibra 500 Mega", "grupo": "internet",
+                 "situacao": "Ativo", "valor": 149.9}
              ]}
         ]"""
 

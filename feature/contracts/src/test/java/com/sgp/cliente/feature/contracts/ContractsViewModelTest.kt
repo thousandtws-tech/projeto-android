@@ -41,21 +41,25 @@ class ContractsViewModelTest {
     private val contract1 = contract(id = 1)
     private val contract2 = contract(id = 2)
 
-    private fun contract(id: Int) = Contract(
+    private fun contract(id: Int, status: String = "Ativo") = Contract(
         id = id,
-        status = "Ativo",
+        status = status,
         razaoSocial = "Maria $id",
         cpfCnpj = "52998224725",
         dueDay = 10,
         internetPlan = null,
         internetPlanValue = null,
         internetPlanId = null,
+        address = "Rua $id, 100",
     )
 
-    private fun session(selectedContractId: Int?) = CustomerSession(
+    private fun session(
+        selectedContractId: Int?,
+        contracts: List<Contract> = listOf(contract1, contract2),
+    ) = CustomerSession(
         credentials = Credentials("52998224725", "secret"),
         customerName = "Maria",
-        contracts = listOf(contract1, contract2),
+        contracts = contracts,
         selectedContractId = selectedContractId,
     )
 
@@ -130,21 +134,34 @@ class ContractsViewModelTest {
     }
 
     @Test
-    fun `contracts without open boletos are hidden after probing`() = runTest {
-        every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
+    fun `only active contracts with open bills are listed`() = runTest {
+        val inactive = contract(id = 3, status = "Inativo")
+        every { observeSession() } returns flowOf(
+            SessionState.LoggedIn(session(1, listOf(contract1, contract2, inactive))),
+        )
         coEvery { getOpenBillCounts(any()) } returns mapOf(1 to 2, 2 to 0)
         viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
         dispatcher.scheduler.advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(listOf(contract1), state.visibleContracts)
-        assertEquals(1, state.hiddenCount)
-        assertFalse(state.probing)
+        // contract2: active but zero open bills; inactive: filtered by status.
+        assertEquals(listOf(contract1), viewModel.uiState.value.visibleContracts)
+    }
+
+    @Test
+    fun `open-bill probing runs only over active contracts`() = runTest {
+        val inactive = contract(id = 3, status = "Cancelado")
+        every { observeSession() } returns flowOf(
+            SessionState.LoggedIn(session(1, listOf(contract1, contract2, inactive))),
+        )
+        viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.probing)
         coVerify(exactly = 1) { getOpenBillCounts(listOf(contract1, contract2)) }
     }
 
     @Test
-    fun `a failed probe keeps the contract visible and showAll reveals hidden ones`() = runTest {
+    fun `a failed probe keeps the contract visible`() = runTest {
         every { observeSession() } returns flowOf(SessionState.LoggedIn(session(1)))
         coEvery { getOpenBillCounts(any()) } returns mapOf(1 to 0, 2 to null)
         viewModel = ContractsViewModel(observeSession, selectContract, getOpenBillCounts)
@@ -152,8 +169,5 @@ class ContractsViewModelTest {
 
         // Probe failed for contract2 (null) — keep it rather than hiding it.
         assertEquals(listOf(contract2), viewModel.uiState.value.visibleContracts)
-
-        viewModel.toggleShowAll()
-        assertEquals(listOf(contract1, contract2), viewModel.uiState.value.visibleContracts)
     }
 }

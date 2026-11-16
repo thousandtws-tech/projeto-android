@@ -13,6 +13,8 @@ data class Contract(
     val internetPlan: String?,
     val internetPlanValue: Double?,
     val internetPlanId: String?,
+    /** Street line (`endereco_linha_0`) — how subscribers tell contracts apart. */
+    val address: String?,
 ) {
     val isActive: Boolean
         get() = status.trim().equals(STATUS_ATIVO, ignoreCase = true)

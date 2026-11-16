@@ -145,6 +145,7 @@ private data class StoredContract(
     val internetPlan: String? = null,
     val internetPlanValue: Double? = null,
     val internetPlanId: String? = null,
+    val address: String? = null,
 ) {
     fun toDomain() = Contract(
         id = id,
@@ -155,6 +156,7 @@ private data class StoredContract(
         internetPlan = internetPlan,
         internetPlanValue = internetPlanValue,
         internetPlanId = internetPlanId,
+        address = address,
     )
 
     companion object {
@@ -167,6 +169,7 @@ private data class StoredContract(
             internetPlan = contract.internetPlan,
             internetPlanValue = contract.internetPlanValue,
             internetPlanId = contract.internetPlanId,
+            address = contract.address,
         )
     }
 }

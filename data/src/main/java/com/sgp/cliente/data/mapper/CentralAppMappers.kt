@@ -34,6 +34,7 @@ fun CentralContractDto.toDomain(): Contract {
         internetPlan = internet?.plan?.takeIf { it.isNotBlank() },
         internetPlanValue = internet?.value ?: value,
         internetPlanId = internet?.id?.toString(),
+        address = address?.takeIf { it.isNotBlank() },
     )
 }
 

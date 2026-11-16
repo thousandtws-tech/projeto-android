@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.PaymentPromise
+import com.sgp.cliente.domain.model.SessionState
+import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetOpenInvoicesUseCase
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
@@ -27,6 +29,7 @@ data class PaymentPromisesUiState(
 
 @HiltViewModel
 class PaymentPromisesViewModel @Inject constructor(
+    observeSession: ObserveSessionUseCase,
     private val getOpenInvoices: GetOpenInvoicesUseCase,
     private val requestPromise: RequestPaymentPromiseUseCase,
 ) : ViewModel() {
@@ -36,6 +39,17 @@ class PaymentPromisesViewModel @Inject constructor(
 
     init {
         load()
+        viewModelScope.launch {
+            var lastContractId: Int? = null
+            observeSession().collect { state ->
+                val contractId = (state as? SessionState.LoggedIn)
+                    ?.session?.selectedContract?.id
+                if (contractId != null && lastContractId != null && contractId != lastContractId) {
+                    load()
+                }
+                lastContractId = contractId ?: lastContractId
+            }
+        }
     }
 
     fun load() {

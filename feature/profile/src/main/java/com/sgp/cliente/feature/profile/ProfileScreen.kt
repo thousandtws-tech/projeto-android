@@ -308,6 +308,7 @@ private val previewSession = CustomerSession(
             internetPlan = "Fibra 300 Mega",
             internetPlanValue = 99.90,
             internetPlanId = null,
+            address = "Rua das Flores, 123 - Centro",
         ),
     ),
     selectedContractId = 1001,

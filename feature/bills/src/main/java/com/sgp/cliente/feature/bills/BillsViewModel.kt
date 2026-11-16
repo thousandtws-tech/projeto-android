@@ -9,6 +9,8 @@ import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.BoletoContent
+import com.sgp.cliente.domain.model.SessionState
+import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoicesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +51,7 @@ data class BillsUiState(
 
 @HiltViewModel
 class BillsViewModel @Inject constructor(
+    observeSession: ObserveSessionUseCase,
     private val getInvoices: GetInvoicesUseCase,
     private val getBoleto: GetBoletoUseCase,
 ) : ViewModel() {
@@ -58,6 +61,19 @@ class BillsViewModel @Inject constructor(
 
     init {
         refresh()
+        viewModelScope.launch {
+            var lastContractId: Int? = null
+            observeSession().collect { state ->
+                // The tab ViewModel survives the contract picker — its
+                // list must be refetched for the newly selected contract.
+                val contractId = (state as? SessionState.LoggedIn)
+                    ?.session?.selectedContract?.id
+                if (contractId != null && lastContractId != null && contractId != lastContractId) {
+                    refresh()
+                }
+                lastContractId = contractId ?: lastContractId
+            }
+        }
     }
 
     fun refresh() {

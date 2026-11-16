@@ -14,7 +14,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -71,12 +70,9 @@ fun ContractsScreen(
                 ) {
                     SgpEmptyState(
                         title = "Nenhum contrato com boleto em aberto",
-                        message = "Só aparecem aqui contratos com boleto gerado ou em aberto.",
+                        message = "Só aparecem aqui contratos ativos com boleto gerado ou em aberto.",
                         modifier = Modifier.padding(Spacing.lg),
                     )
-                    TextButton(onClick = viewModel::toggleShowAll) {
-                        Text("Ver todos os contratos")
-                    }
                 }
 
                 else -> LazyColumn(
@@ -91,22 +87,6 @@ fun ContractsScreen(
                             selected = contract.id == uiState.selectedContractId,
                             onClick = { viewModel.select(contract.id) },
                         )
-                    }
-                    if (uiState.hiddenCount > 0) {
-                        item {
-                            TextButton(
-                                onClick = viewModel::toggleShowAll,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(
-                                    if (uiState.showAll) {
-                                        "Ocultar contratos sem boleto"
-                                    } else {
-                                        "Ver todos os contratos (${uiState.hiddenCount} ocultos)"
-                                    },
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -133,6 +113,13 @@ private fun ContractCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+                contract.address?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 contract.internetPlan?.let {
                     Text(
                         text = it,

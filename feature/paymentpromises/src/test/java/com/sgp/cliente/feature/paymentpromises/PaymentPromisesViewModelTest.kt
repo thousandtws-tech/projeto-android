@@ -4,16 +4,20 @@ import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
+import com.sgp.cliente.domain.model.SessionState
+import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetOpenInvoicesUseCase
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -30,6 +34,7 @@ import org.junit.Test
 class PaymentPromisesViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
+    private val observeSession: ObserveSessionUseCase = mockk()
     private val getOpenInvoices: GetOpenInvoicesUseCase = mockk()
     private val requestPromise: RequestPaymentPromiseUseCase = mockk()
     private lateinit var viewModel: PaymentPromisesViewModel
@@ -62,7 +67,10 @@ class PaymentPromisesViewModelTest {
     )
 
     @Before
-    fun setUp() = Dispatchers.setMain(dispatcher)
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+        every { observeSession() } returns flowOf(SessionState.LoggedOut)
+    }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
@@ -71,7 +79,7 @@ class PaymentPromisesViewModelTest {
     fun `successful load exposes the open invoices`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -84,7 +92,7 @@ class PaymentPromisesViewModelTest {
     fun `load failure surfaces the typed error`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.failure(AppError.Server)
 
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -99,7 +107,7 @@ class PaymentPromisesViewModelTest {
             AppResult.failure(AppError.Server),
             AppResult.success(open),
         )
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(AppError.Server, viewModel.uiState.value.error)
 
@@ -116,7 +124,7 @@ class PaymentPromisesViewModelTest {
     fun `successful request exposes the promise result`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { requestPromise() } returns AppResult.success(promise)
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.request()
@@ -135,7 +143,7 @@ class PaymentPromisesViewModelTest {
         val gate = CompletableDeferred<AppResult<PaymentPromise>>()
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { requestPromise() } coAnswers { gate.await() }
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.request()
@@ -156,7 +164,7 @@ class PaymentPromisesViewModelTest {
     fun `request failure surfaces the action error without touching the loaded list`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { requestPromise() } returns AppResult.failure(AppError.Server)
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.request()
@@ -174,7 +182,7 @@ class PaymentPromisesViewModelTest {
     fun `consumeResult clears the promise dialog state`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { requestPromise() } returns AppResult.success(promise)
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
         viewModel.request()
         dispatcher.scheduler.advanceUntilIdle()
@@ -189,7 +197,7 @@ class PaymentPromisesViewModelTest {
     fun `consumeActionError clears the snackbar state`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { requestPromise() } returns AppResult.failure(AppError.Server)
-        viewModel = PaymentPromisesViewModel(getOpenInvoices, requestPromise)
+        viewModel = PaymentPromisesViewModel(observeSession, getOpenInvoices, requestPromise)
         dispatcher.scheduler.advanceUntilIdle()
         viewModel.request()
         dispatcher.scheduler.advanceUntilIdle()

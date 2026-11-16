@@ -21,6 +21,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -53,6 +54,7 @@ class DashboardViewModelTest {
         internetPlan = null,
         internetPlanValue = null,
         internetPlanId = null,
+        address = null,
     )
     private val session = CustomerSession(
         credentials = Credentials("52998224725", "secret"),
@@ -241,6 +243,45 @@ class DashboardViewModelTest {
 
         assertNull(viewModel.uiState.value.serviceStatus)
         assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `switching the selected contract reloads invoices and service status`() = runTest {
+        val other = contract.copy(id = 8)
+        val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session))
+        every { observeSession() } returns sessionFlow
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = DashboardViewModel(
+            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
+        )
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { getOpenInvoices(false) }
+        coVerify(exactly = 1) { checkServiceStatus() }
+
+        sessionFlow.value = SessionState.LoggedIn(
+            session.copy(contracts = listOf(contract, other), selectedContractId = 8),
+        )
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { getOpenInvoices(true) }
+        coVerify(exactly = 2) { checkServiceStatus() }
+        assertEquals(8, viewModel.uiState.value.contract?.id)
+    }
+
+    @Test
+    fun `re-emitting the same contract does not reload`() = runTest {
+        val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session))
+        every { observeSession() } returns sessionFlow
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = DashboardViewModel(
+            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
+        )
+        dispatcher.scheduler.advanceUntilIdle()
+
+        sessionFlow.value = SessionState.LoggedIn(session)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { getOpenInvoices(any()) }
     }
 
     @Test

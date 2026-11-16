@@ -2,18 +2,26 @@ package com.sgp.cliente.feature.bills
 
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
+import com.sgp.cliente.domain.model.Contract
+import com.sgp.cliente.domain.model.Credentials
+import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.PagedResult
 import com.sgp.cliente.domain.model.BoletoContent
+import com.sgp.cliente.domain.model.SessionState
+import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoicesUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,9 +36,29 @@ import org.junit.Test
 class BillsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
+    private val observeSession: ObserveSessionUseCase = mockk()
     private val getInvoices: GetInvoicesUseCase = mockk()
     private val getBoleto: GetBoletoUseCase = mockk()
     private lateinit var viewModel: BillsViewModel
+
+    private fun contract(id: Int) = Contract(
+        id = id,
+        status = "Ativo",
+        razaoSocial = "Maria",
+        cpfCnpj = "52998224725",
+        dueDay = 10,
+        internetPlan = null,
+        internetPlanValue = null,
+        internetPlanId = null,
+        address = null,
+    )
+
+    private fun session(selectedId: Int) = CustomerSession(
+        credentials = Credentials("52998224725", "secret"),
+        customerName = "Maria",
+        contracts = listOf(contract(1), contract(2)),
+        selectedContractId = selectedId,
+    )
 
     private fun invoice(
         id: Int = 42,
@@ -58,11 +86,14 @@ class BillsViewModelTest {
 
     private fun viewModel(items: List<Invoice> = emptyList()): BillsViewModel {
         stubPage(items)
-        return BillsViewModel(getInvoices, getBoleto)
+        return BillsViewModel(observeSession, getInvoices, getBoleto)
     }
 
     @Before
-    fun setUp() = Dispatchers.setMain(dispatcher)
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+        every { observeSession() } returns flowOf(SessionState.LoggedOut)
+    }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
@@ -73,6 +104,20 @@ class BillsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         coVerify { getInvoices(InvoiceStatus.PAID, 0, any(), true) }
+    }
+
+    @Test
+    fun `switching the selected contract refetches the paid list`() = runTest {
+        val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session(1)))
+        every { observeSession() } returns sessionFlow
+        viewModel = viewModel(listOf(invoice()))
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { getInvoices(InvoiceStatus.PAID, 0, any(), true) }
+
+        sessionFlow.value = SessionState.LoggedIn(session(2))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 2) { getInvoices(InvoiceStatus.PAID, 0, any(), true) }
     }
 
     @Test

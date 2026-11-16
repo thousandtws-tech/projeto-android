@@ -24,18 +24,13 @@ data class ContractsUiState(
     /** Per-contract open-boleto count; `null` = probe failed (kept visible). */
     val openBillCounts: Map<Int, Int?> = emptyMap(),
     val probing: Boolean = false,
-    /** Escape hatch — show contracts without open boletos too. */
-    val showAll: Boolean = false,
 ) {
-    /** Contracts payable now — the client's ask: only open/generated boletos. */
+    /** Only payable contracts are listed — active AND with an open/generated
+     * boleto (the client's ask: inactive or nothing-to-pay contracts just
+     * confuse subscribers, and a test account can carry a dozen of them).
+     * Not-yet-probed contracts (`?: 1`) stay visible until the count lands. */
     val visibleContracts: List<Contract>
-        get() = if (showAll) {
-            contracts
-        } else {
-            contracts.filter { (openBillCounts[it.id] ?: 1) > 0 }
-        }
-
-    val hiddenCount: Int get() = contracts.size - visibleContracts.size
+        get() = contracts.filter { it.isActive && (openBillCounts[it.id] ?: 1) > 0 }
 }
 
 sealed interface ContractsEvent {
@@ -60,6 +55,7 @@ class ContractsViewModel @Inject constructor(
             observeSession().collect { state ->
                 if (state is SessionState.LoggedIn) {
                     val contracts = state.session.contracts
+                    val active = contracts.filter(Contract::isActive)
                     val counts = _uiState.value.openBillCounts
                     _uiState.value = ContractsUiState(
                         loading = false,
@@ -67,10 +63,9 @@ class ContractsViewModel @Inject constructor(
                         selectedContractId = state.session.selectedContract?.id,
                         openBillCounts = counts,
                         probing = _uiState.value.probing,
-                        showAll = _uiState.value.showAll,
                     )
-                    if (contracts.size > 1 && !counts.keys.containsAll(contracts.map(Contract::id))) {
-                        probe(contracts)
+                    if (active.size > 1 && !counts.keys.containsAll(active.map(Contract::id))) {
+                        probe(active)
                     }
                 }
             }
@@ -90,9 +85,5 @@ class ContractsViewModel @Inject constructor(
             selectContract(contractId)
             _events.emit(ContractsEvent.ContractSelected)
         }
-    }
-
-    fun toggleShowAll() {
-        _uiState.value = _uiState.value.copy(showAll = !_uiState.value.showAll)
     }
 }

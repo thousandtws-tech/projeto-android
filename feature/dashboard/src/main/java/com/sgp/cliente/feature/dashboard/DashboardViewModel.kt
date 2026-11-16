@@ -53,10 +53,18 @@ class DashboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            var lastContractId: Int? = null
             observeSession().collect { state ->
-                _uiState.update {
-                    it.copy(session = (state as? SessionState.LoggedIn)?.session)
+                val session = (state as? SessionState.LoggedIn)?.session
+                _uiState.update { it.copy(session = session) }
+                // A contract switch elsewhere leaves the loaded invoices
+                // pointing at the old contract — reload them right away.
+                val contractId = session?.selectedContract?.id
+                if (contractId != null && lastContractId != null && contractId != lastContractId) {
+                    load(forceRefresh = true)
+                    loadServiceStatus()
                 }
+                lastContractId = contractId ?: lastContractId
             }
         }
         load(forceRefresh = false)

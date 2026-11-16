@@ -44,6 +44,7 @@ class ProfileViewModelTest {
                 internetPlan = null,
                 internetPlanValue = null,
                 internetPlanId = null,
+                address = null,
             ),
         ),
         selectedContractId = 7,
