@@ -4,7 +4,28 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ## [Unreleased]
 
+### Adicionado
+- Nova ação de fatura "Pagar online": `url_cobranca` da API agora chega ao
+  domínio como `Invoice.paymentUrl` (página HTML de checkout do provedor)
+  e vira CTA no card via `LocalUriHandler` — caminho real de pagamento em
+  contas onde o PIX/boleto ainda não foi gerado pelo provedor.
+
 ### Alterado
+- Login sem ícone de engrenagem: a configuração de servidor sai do header
+  e continua acessível em Perfil → Preferências → "Servidor do provedor".
+- URL oficial do projeto é `https://demo.sgp.net.br` em **todos** os
+  flavors (dev/staging/prod, `DEFAULT_CENTRAL_ID = 3`, token via
+  discovery) — antes só o dev apontava pro demo.
+- Resposta PIX (`titulo/{id}/pix/`) parseada de forma robusta: `pix`
+  aceita objeto (`codigo`, `copiaecola`, `emv`, `payload`, `qrcode`…),
+  string EMV direta ou `codigo_pix` no topo; `JsonNull`/valores aninhados
+  não vazam como código. `status=0`/vazio exibe a `msg` do provedor
+  ("PIX não disponível.") em snackbar — nunca finge código copiado.
+- `downloadBoleto` valida o payload antes de renderizar: corpos que não
+  começam com `%PDF` (ex.: resposta "500" de boleto ainda não gerado)
+  viram erro honesto "O boleto ainda não foi gerado…" em vez de quebrar
+  o `PdfRenderer`. `boletoPath` volta a usar só `titulo.link` —
+  `pagamento_boleto=false` não indica ausência de PDF (verificado na API).
 - Cards de fatura na lista viram cards completos estilo referência: badge
   de status, botão outlined "Ver fatura", blocos Vencimento/Valor/Nº da
   fatura, e **ações de pagamento inline** — Copiar código (linha

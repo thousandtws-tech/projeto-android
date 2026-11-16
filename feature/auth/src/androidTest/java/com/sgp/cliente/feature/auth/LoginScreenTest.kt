@@ -38,7 +38,6 @@ class LoginScreenTest {
                     onLoginChange = { state = state.copy(login = it) },
                     onPasswordChange = { state = state.copy(password = it) },
                     onSubmit = onSubmit,
-                    onConfigureServer = {},
                     onOpenPrivacy = {},
                 )
             }

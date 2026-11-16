@@ -2,8 +2,10 @@ package com.sgp.cliente.data.remote.centralapp
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 // ----- GET /api/centralapp/list/ --------------------------------------------
 
@@ -139,28 +141,32 @@ data class CentralInvoiceDto(
 data class CentralPixResponseDto(
     @SerialName("status") val status: Int? = null,
     @SerialName("msg") val message: String? = null,
-    /** Shape varies by gateway — kept as raw JSON and picked apart downstream. */
-    @SerialName("pix") val pix: JsonObject? = null,
+    /**
+     * Shape varies by gateway: object keyed by field name, a plain EMV
+     * string, or an empty object on failure — kept as raw JSON.
+     */
+    @SerialName("pix") val pix: JsonElement? = null,
+    /** Some gateways expose the code at the top level instead of `pix`. */
+    @SerialName("codigo_pix") val pixCode: String? = null,
 ) {
-    /** First non-blank copy-paste code found under the common key names. */
+    /** First non-blank copy-paste code across every known response shape. */
     fun copyPasteCode(): String? =
-        pix?.entries?.asSequence()
-            ?.mapNotNull { (key, value) ->
-                value.jsonPrimitive.content
-                    .takeIf { it.isNotBlank() }
-                    ?.takeIf {
-                        key.equals("codigo", true) ||
-                            key.equals("copiaecola", true) ||
-                            key.equals("copia_e_cola", true) ||
-                            key.equals("emv", true) ||
-                            key.equals("payload", true) ||
-                            key.equals("pix", true) ||
-                            key.equals("codigo_pix", true) ||
-                            key.equals("qrcode", true)
-                    }
-            }
-            ?.firstOrNull()
+        pixCode?.takeIf { it.isNotBlank() }
+            ?: (pix as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: (pix as? JsonObject)?.entries?.asSequence()
+                ?.mapNotNull { (key, value) ->
+                    (value as? JsonPrimitive)?.contentOrNull
+                        ?.takeIf { it.isNotBlank() }
+                        ?.takeIf { key.lowercase() in PIX_CODE_KEYS }
+                }
+                ?.firstOrNull()
 }
+
+/** Field names gateways have used to carry the PIX copy-and-paste payload. */
+private val PIX_CODE_KEYS = setOf(
+    "codigo", "codigo_pix", "copiaecola", "copia_e_cola",
+    "emv", "payload", "pix", "qrcode", "qrcode_pix",
+)
 
 // ----- Shared {status, msg} response ----------------------------------------
 

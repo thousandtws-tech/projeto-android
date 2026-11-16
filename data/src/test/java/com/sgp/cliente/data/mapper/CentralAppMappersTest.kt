@@ -94,20 +94,23 @@ class CentralAppMappersTest {
         assertEquals("/f/3.pdf", dto.toDomain()!!.boletoPath)
 
         // chargeUrl is the public checkout page (HTML), never a PDF the
-        // viewer can render — it must not leak into boletoPath.
+        // viewer can render — it maps to paymentUrl, not boletoPath.
         val chargeOnly = CentralInvoiceDto(id = 4, status = "Em aberto", chargeUrl = "https://pay/x")
-        assertNull(chargeOnly.toDomain()!!.boletoPath)
+        val mapped = chargeOnly.toDomain()!!
+        assertNull(mapped.boletoPath)
+        assertEquals("https://pay/x", mapped.paymentUrl)
 
-        // `pagamento_boleto=false` means no boleto exists server-side —
-        // `link` returns a broken body for those titles, so the card must
-        // not offer "Abrir boleto".
-        val noBoleto = CentralInvoiceDto(
+        // `pagamento_boleto=false` does NOT mean "no boleto" — verified on
+        // the live demo: the flag stays false even when `link` serves a
+        // valid PDF, so boletoPath keeps the link and the viewer validates
+        // the payload instead.
+        val flagOff = CentralInvoiceDto(
             id = 5,
             status = "Em aberto",
             boletoUrl = "/f/5.pdf",
             allowsBoleto = false,
         )
-        assertNull(noBoleto.toDomain()!!.boletoPath)
+        assertEquals("/f/5.pdf", flagOff.toDomain()!!.boletoPath)
     }
 
     @Test
@@ -120,6 +123,41 @@ class CentralAppMappersTest {
         val domain = dto.toDomain()
         assertTrue(domain.isSuccess)
         assertEquals("000201pix", domain.code)
+    }
+
+    @Test
+    fun `pix response accepts plain string and top-level code`() {
+        // Some gateways answer `"pix": "<emv>"` instead of an object.
+        val stringPayload = CentralPixResponseDto(
+            status = 1,
+            pix = kotlinx.serialization.json.JsonPrimitive("000201emv"),
+        )
+        assertEquals("000201emv", stringPayload.copyPasteCode())
+
+        // Others expose `codigo_pix` at the top level with no `pix` block.
+        val topLevel = CentralPixResponseDto(status = 1, pixCode = "000201top")
+        assertEquals("000201top", topLevel.copyPasteCode())
+    }
+
+    @Test
+    fun `pix response rejects empty and status-zero payloads`() {
+        // The demo server answers `{"msg":"PIX não disponível.","status":0,"pix":{}}`.
+        val unavailable = CentralPixResponseDto(
+            status = 0,
+            message = "PIX não disponível.",
+            pix = buildJsonObject { },
+        )
+        val domain = unavailable.toDomain()
+        assertFalse(domain.isSuccess)
+        assertNull(domain.code)
+        assertEquals("PIX não disponível.", domain.message)
+
+        // A `null` inside the object must not leak the literal "null".
+        val nullCode = CentralPixResponseDto(
+            status = 1,
+            pix = buildJsonObject { put("codigo", kotlinx.serialization.json.JsonNull) },
+        )
+        assertNull(nullCode.copyPasteCode())
     }
 
     @Test

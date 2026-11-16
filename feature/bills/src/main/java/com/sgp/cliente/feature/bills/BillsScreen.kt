@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,6 +74,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -568,6 +570,7 @@ private fun InvoiceCard(
 ) {
     val overdue = invoice.isOverdue(today)
     val payable = invoice.status == InvoiceStatus.OPEN
+    val uriHandler = LocalUriHandler.current
 
     Surface(
         onClick = onOpenInvoice,
@@ -629,33 +632,33 @@ private fun InvoiceCard(
                 // button exists only when a code can actually be copied (the
                 // PIX-in-boleto case is already covered by "Abrir boleto"),
                 // so no two buttons ever do the same thing.
-                val hasAnyAction = invoice.barcode != null ||
-                    invoice.pixCode != null ||
+                val pixCode = invoice.pixCode
+                val barcode = invoice.barcode
+                val paymentUrl = invoice.paymentUrl
+                val hasAnyAction = pixCode != null ||
+                    barcode != null ||
                     invoice.canGeneratePix ||
-                    invoice.boletoPath != null
+                    invoice.boletoPath != null ||
+                    paymentUrl != null
                 if (hasAnyAction) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        if (invoice.pixCode != null || invoice.canGeneratePix) {
+                        if (pixCode != null || invoice.canGeneratePix) {
                             PaymentAction(
                                 icon = Icons.Filled.QrCode2,
                                 title = "Copiar PIX",
-                                caption = if (invoice.pixCode != null) {
-                                    "Pague agora"
-                                } else {
-                                    "Gerar agora"
-                                },
+                                caption = if (pixCode != null) "Pague agora" else "Gerar agora",
                                 loading = generatingPix,
                                 modifier = Modifier.weight(1f),
                                 onAction = onPix,
                             )
                         }
-                        if (invoice.barcode != null) {
+                        if (barcode != null) {
                             PaymentAction(
                                 icon = Icons.Outlined.ContentCopy,
                                 title = "Copiar código",
                                 caption = "Linha digitável",
                                 modifier = Modifier.weight(1f),
-                            ) { onCopyValue(invoice.barcode!!) }
+                            ) { onCopyValue(barcode) }
                         }
                         if (invoice.boletoPath != null) {
                             PaymentAction(
@@ -664,6 +667,14 @@ private fun InvoiceCard(
                                 caption = "Visualizar PDF",
                                 modifier = Modifier.weight(1f),
                             ) { onOpenBoleto(invoice) }
+                        }
+                        if (paymentUrl != null) {
+                            PaymentAction(
+                                icon = Icons.Outlined.Payments,
+                                title = "Pagar online",
+                                caption = "Checkout do provedor",
+                                modifier = Modifier.weight(1f),
+                            ) { uriHandler.openUri(paymentUrl) }
                         }
                     }
                 } else {

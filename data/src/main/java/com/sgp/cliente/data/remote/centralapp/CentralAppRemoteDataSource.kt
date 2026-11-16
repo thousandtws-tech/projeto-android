@@ -186,7 +186,18 @@ class CentralAppRemoteDataSource @Inject constructor(
      * `contrato` fields and no `callWithAuth` retry are needed.
      */
     suspend fun downloadBoleto(url: String): AppResult<ByteArray> =
-        safeApiCall { api.downloadFile(url).bytes() }
+        safeApiCall { api.downloadFile(url).bytes() }.let { result ->
+            // Some titles carry a `link` that answers a text body ("500")
+            // instead of a PDF — refuse non-PDF payloads here so the viewer
+            // gets an honest domain error, not a renderer crash.
+            if (result is AppResult.Success && !result.value.isPdf()) {
+                AppResult.failure(
+                    AppError.Api("O boleto ainda não foi gerado para esta fatura. Tente novamente mais tarde."),
+                )
+            } else {
+                result
+            }
+        }
 
     // -- internals -------------------------------------------------------------
 
@@ -257,6 +268,10 @@ class CentralAppRemoteDataSource @Inject constructor(
         this is JsonObject -> get("result") ?: get("itens") ?: this
         else -> this
     }
+
+    private fun ByteArray.isPdf(): Boolean =
+        size > 4 && this[0] == '%'.code.toByte() && this[1] == 'P'.code.toByte() &&
+            this[2] == 'D'.code.toByte() && this[3] == 'F'.code.toByte()
 
     companion object {
         private const val FIELD_LOGIN = "login"

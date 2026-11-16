@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
-import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,7 +34,6 @@ import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 
-/** Tags used by Compose UI tests to locate login form elements. */
 internal object LoginTestTags {
     const val UsernameField = "login_username_field"
     const val PasswordField = "login_password_field"
@@ -47,7 +43,6 @@ internal object LoginTestTags {
 
 @Composable
 fun LoginScreen(
-    onConfigureServer: () -> Unit,
     onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
@@ -59,20 +54,17 @@ fun LoginScreen(
         onLoginChange = viewModel::onLoginChange,
         onPasswordChange = viewModel::onPasswordChange,
         onSubmit = viewModel::submit,
-        onConfigureServer = onConfigureServer,
         onOpenPrivacy = onOpenPrivacy,
         modifier = modifier,
     )
 }
 
-/** Stateless login form; [LoginScreen] wires it to [LoginViewModel]. */
 @Composable
 internal fun LoginContent(
     uiState: LoginUiState,
     onLoginChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onConfigureServer: () -> Unit,
     onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -90,7 +82,7 @@ internal fun LoginContent(
                 modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                LoginHeader(onConfigureServer)
+                LoginHeader()
 
                 SgpTextField(
                     value = uiState.login,
@@ -151,7 +143,7 @@ internal fun LoginContent(
 }
 
 @Composable
-private fun LoginHeader(onConfigureServer: () -> Unit) {
+private fun LoginHeader() {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -172,12 +164,6 @@ private fun LoginHeader(onConfigureServer: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.xxs),
-        )
-        SgpTooltipButton(
-            icon = Icons.Filled.Settings,
-            description = "Configurar servidor",
-            onClick = onConfigureServer,
-            modifier = Modifier.align(Alignment.End),
         )
     }
 }
@@ -207,7 +193,6 @@ private fun LoginContentEmptyPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onConfigureServer = {},
             onOpenPrivacy = {},
         )
     }
@@ -222,7 +207,6 @@ private fun LoginContentFilledPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onConfigureServer = {},
             onOpenPrivacy = {},
         )
     }
@@ -241,7 +225,6 @@ private fun LoginContentErrorPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onConfigureServer = {},
             onOpenPrivacy = {},
         )
     }
@@ -260,7 +243,6 @@ private fun LoginContentLoadingPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onConfigureServer = {},
             onOpenPrivacy = {},
         )
     }

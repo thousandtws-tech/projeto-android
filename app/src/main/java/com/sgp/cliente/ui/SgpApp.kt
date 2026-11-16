@@ -88,7 +88,6 @@ fun SgpApp(
             when (sessionState) {
                 SessionState.Loading -> SgpLoadingView(Modifier.fillMaxSize())
                 else -> LoginScreen(
-                    onConfigureServer = { navController.navigate(Routes.SERVER_CONFIG) },
                     onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
                 )
             }
