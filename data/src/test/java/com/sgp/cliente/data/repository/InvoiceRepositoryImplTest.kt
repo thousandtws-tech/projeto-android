@@ -288,7 +288,7 @@ class InvoiceRepositoryImplTest {
                         status = "Em aberto",
                         dueDate = "10/03/2026",
                         amount = "100.0",
-                        chargeUrl = "https://pgw.exemplo.com/c/xyz",
+                        boletoUrl = "https://pgw.exemplo.com/c/xyz",
                     ),
                 ),
                 total = null,

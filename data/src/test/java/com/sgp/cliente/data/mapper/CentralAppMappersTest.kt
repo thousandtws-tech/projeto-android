@@ -93,9 +93,21 @@ class CentralAppMappersTest {
         assertTrue(dto.isOverdueOn(LocalDate.of(2025, 10, 21)))
         assertEquals("/f/3.pdf", dto.toDomain()!!.boletoPath)
 
-        // chargeUrl is used when the direct boleto link is missing.
+        // chargeUrl is the public checkout page (HTML), never a PDF the
+        // viewer can render — it must not leak into boletoPath.
         val chargeOnly = CentralInvoiceDto(id = 4, status = "Em aberto", chargeUrl = "https://pay/x")
-        assertEquals("https://pay/x", chargeOnly.toDomain()!!.boletoPath)
+        assertNull(chargeOnly.toDomain()!!.boletoPath)
+
+        // `pagamento_boleto=false` means no boleto exists server-side —
+        // `link` returns a broken body for those titles, so the card must
+        // not offer "Abrir boleto".
+        val noBoleto = CentralInvoiceDto(
+            id = 5,
+            status = "Em aberto",
+            boletoUrl = "/f/5.pdf",
+            allowsBoleto = false,
+        )
+        assertNull(noBoleto.toDomain()!!.boletoPath)
     }
 
     @Test

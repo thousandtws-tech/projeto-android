@@ -63,7 +63,10 @@ fun CentralInvoiceDto.toDomain(): Invoice? {
         barcode = (barcode ?: barcodeAlt)?.takeIf { it.isNotBlank() },
         pixCode = pixCode?.takeIf { it.isNotBlank() },
         canGeneratePix = pixOnDemand == true || allowsPix == true,
-        boletoPath = (boletoUrl ?: chargeUrl)?.takeIf { it.isNotBlank() },
+        // `pagamento_boleto=false` means no boleto was generated — `link`
+        // 500s server-side for those titles, and `url_cobranca` is an HTML
+        // checkout page, not a PDF the viewer can render.
+        boletoPath = boletoUrl?.takeIf { allowsBoleto != false && it.isNotBlank() },
     )
 }
 

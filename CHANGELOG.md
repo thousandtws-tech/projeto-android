@@ -46,6 +46,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `verticalScroll`, estados de loading/erro com altura fixa de 420dp.
 
 ### Corrigido
+- "Abrir boleto" não aparece mais em faturas sem boleto: o mapper passa a
+  respeitar `pagamento_boleto` — quando `false`, `boletoPath` fica nulo
+  (o `link` da API responde um corpo `500` nesses títulos, e
+  `url_cobranca` é página HTML de checkout, não PDF). Conta Pedro
+  (141.046.132-74): cards mostram só "Copiar PIX / Gerar agora" em vez de
+  abrir o viewer e cair em "Resposta inesperada do servidor".
 - Filtros de fatura (Em aberto/Pagas/Canceladas) voltam a responder
   corretamente: a API `titulo/list/` não honra `grupo=canceladas` nem o
   campo `status` (caem num fallback sem filtro), e `grupo=abertos` cobre
