@@ -17,6 +17,7 @@ import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.Invoice
+import com.sgp.cliente.domain.model.InvoiceStatus
 import com.sgp.cliente.domain.model.PagedResult
 import com.sgp.cliente.domain.model.PaymentPromise
 import com.sgp.cliente.domain.model.PixCharge
@@ -30,6 +31,7 @@ import com.sgp.cliente.domain.repository.PaymentRepository
 import com.sgp.cliente.domain.repository.SessionRepository
 import com.sgp.cliente.domain.repository.SettingsRepository
 import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
@@ -170,7 +172,7 @@ class InvoiceRepositoryImpl @Inject constructor(
         // all tabs share the same raw pages.
         val key = PageKey(contractId, null, offset, limit)
         if (!forceRefresh) {
-            cachedPage(key)?.let { return AppResult.success(it.filteredBy(statusFilter)) }
+            cachedPage(key)?.let { return AppResult.success(it.filteredBy(contractId, statusFilter)) }
         }
         val lock = keyLocksMutex.withLock {
             if (keyLocks.size >= MAX_KEY_LOCKS) keyLocks.clear()
@@ -186,12 +188,12 @@ class InvoiceRepositoryImpl @Inject constructor(
             lock.unlock()
             pageCache[key]
                 ?.takeIf { it.atMillis >= arrivedAt }
-                ?.let { return AppResult.success(it.page.filteredBy(statusFilter)) }
+                ?.let { return AppResult.success(it.page.filteredBy(contractId, statusFilter)) }
             // The in-flight fetch failed — fall through and retry ourselves.
         }
         return lock.withLock {
             if (!forceRefresh) {
-                cachedPage(key)?.let { return@withLock AppResult.success(it.filteredBy(statusFilter)) }
+                cachedPage(key)?.let { return@withLock AppResult.success(it.filteredBy(contractId, statusFilter)) }
             }
             remote.listInvoices(
                 contractId = contractId,
@@ -216,7 +218,7 @@ class InvoiceRepositoryImpl @Inject constructor(
                 )
                 if (offset == 0) lastPage = contractId to raw
                 storePage(key, page)
-                page.filteredBy(statusFilter)
+                page.filteredBy(contractId, statusFilter)
             }
         }
     }
@@ -224,12 +226,37 @@ class InvoiceRepositoryImpl @Inject constructor(
     /** Client-side status filter over a raw stream page — keeps the raw
      * [PagedResult.consumed] so `hasMore`/`nextOffset` still walk the
      * unfiltered stream. */
-    private fun PagedResult<Invoice>.filteredBy(statusFilter: Int?): PagedResult<Invoice> =
+    private fun PagedResult<Invoice>.filteredBy(
+        contractId: Int,
+        statusFilter: Int?,
+    ): PagedResult<Invoice> =
         if (statusFilter == null) {
             this
         } else {
-            copy(items = items.filter { it.statusId == statusFilter })
+            var filtered = items.filter { it.statusId == statusFilter }
+            if (statusFilter == InvoiceStatus.OPEN.apiId) {
+                // Provider rule: only the currently-payable boleto shows —
+                // the earliest open due date (overdue wins); later
+                // competences appear once this one is settled. An open
+                // invoice without a due date stays visible (fail-open).
+                val firstDue = earliestOpenDue(contractId, filtered)
+                filtered = filtered.filter {
+                    it.effectiveOrOriginalDueDate.let { due -> due == null || due == firstDue }
+                }
+            }
+            copy(items = filtered)
         }
+
+    /** Earliest open due date for [contractId] across page 0 plus the
+     * current page — keeps the payable-competence rule stable when the
+     * same month is split across page boundaries. */
+    private fun earliestOpenDue(contractId: Int, currentPage: List<Invoice>): LocalDate? {
+        val firstPage = lastPage?.takeIf { it.first == contractId }?.second.orEmpty()
+        return (firstPage + currentPage)
+            .filter { it.statusId == InvoiceStatus.OPEN.apiId }
+            .mapNotNull { it.effectiveOrOriginalDueDate }
+            .minOrNull()
+    }
 
     private fun cachedPage(key: PageKey): PagedResult<Invoice>? =
         pageCache[key]

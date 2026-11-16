@@ -29,11 +29,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.format.DateFormatter
 import com.sgp.cliente.core.common.format.MoneyFormatter
+import com.sgp.cliente.core.designsystem.components.BoletoViewerDialog
 import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
 import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpCopyableValue
 import com.sgp.cliente.core.designsystem.components.SgpErrorView
-import com.sgp.cliente.core.designsystem.components.dashedBorder
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonBillDetails
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
@@ -96,6 +96,19 @@ fun BillDetailsSheet(
 
     uiState.sentCopyMessage?.let { message ->
         InfoDialog("Segunda via", message, viewModel::consumeSentCopyMessage)
+    }
+
+    if (uiState.boletoOpen) {
+        val invoice = uiState.invoice
+        BoletoViewerDialog(
+            title = invoice?.documentNumber?.let { "Boleto · Nº $it" } ?: "Boleto",
+            fileKey = invoice?.id?.toString() ?: "invoice",
+            pdf = uiState.boletoPdf,
+            loading = uiState.boletoLoading,
+            error = uiState.boletoError,
+            onRetry = viewModel::openBoleto,
+            onDismiss = viewModel::closeBoleto,
+        )
     }
 
     uiState.promise?.let { promise ->
@@ -181,39 +194,11 @@ private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsVi
             }
         }
 
-        uiState.pixCode?.let { pix ->
-            SgpCard {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(
-                        text = "Pagar com PIX",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = "Copie o código abaixo e use o Pix Copia e Cola " +
-                            "no aplicativo do seu banco para fazer o pagamento.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    SgpCopyableValue(
-                        label = "PIX copia e cola",
-                        value = pix,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .dashedBorder(
-                                color = MaterialTheme.colorScheme.outline,
-                                strokeWidth = 1.5.dp,
-                                cornerRadius = 14.dp,
-                            )
-                            .padding(Spacing.sm),
-                    )
-                }
-            }
-        }
-
-        if (isOpen && uiState.canRequestPix) {
-            SgpSecondaryButton(
-                text = "Gerar código PIX",
-                onClick = viewModel::loadPix,
+        if (isOpen && invoice.boletoPath != null) {
+            SgpPrimaryButton(
+                text = "Abrir boleto",
+                onClick = viewModel::openBoleto,
+                loading = uiState.boletoLoading && uiState.boletoOpen,
             )
         }
 

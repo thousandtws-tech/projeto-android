@@ -5,12 +5,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
-- Nova ação de fatura "Pagar online": `url_cobranca` da API agora chega ao
-  domínio como `Invoice.paymentUrl` (página HTML de checkout do provedor)
-  e vira CTA no card via `LocalUriHandler` — caminho real de pagamento em
-  contas onde o PIX/boleto ainda não foi gerado pelo provedor.
+- Detalhes da fatura com ação "Abrir boleto" (botão primário cheio) que
+  baixa o PDF e abre o viewer in-app — antes só existia na lista.
+- `BoletoViewerDialog` promovido a `core:designsystem` (desacoplado de
+  `Invoice` via `title`/`fileKey`) — compartilhado entre lista e detalhes.
+- Login com CPF de múltiplos contratos: após autenticar, o seletor de
+  contrato abre automaticamente para o cliente escolher qual acessar.
+
+### Removido
+- Ações "Copiar PIX" e "Pagar online" saem das faturas (lista e
+  detalhes) a pedido do cliente — o único caminho de pagamento exposto é
+  o boleto. `GeneratePixUseCase` deixa de ser usado pelas telas.
 
 ### Alterado
+- Card de fatura aberta tem **um único botão** — "Abrir boleto" cheio
+  (`SgpPrimaryButton`, mesmo estilo do "Continuar"/login). "Pagar agora"
+  do card de atraso abre o boleto direto.
+- Filtro "Em aberto" mostra apenas a competência pagável: menor
+  vencimento dentre as faturas abertas (vencida vence; competências
+  futuras aparecem quando a atual for quitada). "Todas"/"Pagas"/
+  "Canceladas" mantêm o histórico completo.
 - Login sem ícone de engrenagem: a configuração de servidor sai do header
   e continua acessível em Perfil → Preferências → "Servidor do provedor".
 - URL oficial do projeto é `https://demo.sgp.net.br` em **todos** os

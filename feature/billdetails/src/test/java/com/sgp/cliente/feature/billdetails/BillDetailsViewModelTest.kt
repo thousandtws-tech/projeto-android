@@ -5,11 +5,10 @@ import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
-import com.sgp.cliente.domain.model.PixCharge
 import com.sgp.cliente.domain.model.SendChannel
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
-import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,7 +33,7 @@ class BillDetailsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val getDetails: GetInvoiceDetailsUseCase = mockk()
-    private val generatePix: GeneratePixUseCase = mockk()
+    private val getBoletoPdf: GetBoletoPdfUseCase = mockk()
     private val sendCopy: SendInvoiceCopyUseCase = mockk()
     private val requestPaymentPromise: RequestPaymentPromiseUseCase = mockk()
     private lateinit var viewModel: BillDetailsViewModel
@@ -49,8 +48,7 @@ class BillDetailsViewModelTest {
     private fun invoice(
         id: Int = 42,
         barcode: String? = "34191.79001 01043.510047 91020.150008 9 96770000010000",
-        pixCode: String? = null,
-        canGeneratePix: Boolean = false,
+        boletoPath: String? = null,
     ) = Invoice(
         id = id,
         documentNumber = null,
@@ -62,9 +60,9 @@ class BillDetailsViewModelTest {
         correctedAmount = null,
         paidAt = null,
         barcode = barcode,
-        pixCode = pixCode,
-        canGeneratePix = canGeneratePix,
-        boletoPath = null,
+        pixCode = null,
+        canGeneratePix = false,
+        boletoPath = boletoPath,
     )
 
     private fun viewModel(invoiceId: Int? = 42): BillDetailsViewModel {
@@ -73,7 +71,7 @@ class BillDetailsViewModelTest {
         } else {
             SavedStateHandle(mapOf("invoiceId" to invoiceId))
         }
-        return BillDetailsViewModel(handle, getDetails, generatePix, sendCopy, requestPaymentPromise)
+        return BillDetailsViewModel(handle, getDetails, getBoletoPdf, sendCopy, requestPaymentPromise)
     }
 
     private fun stubLoaded(invoice: Invoice) {
@@ -141,80 +139,62 @@ class BillDetailsViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(7, state.invoice?.id)
-        assertNull(state.generatedPix)
+        assertFalse(state.boletoOpen)
         assertNull(state.sentCopyMessage)
         coVerify(exactly = 1) { getDetails(7) }
     }
 
     @Test
-    fun `invoice carrying an inline PIX code exposes it without generating`() = runTest {
-        stubLoaded(invoice(pixCode = "00020126-pix-copia-e-cola"))
-
+    fun `openBoleto downloads the pdf and close clears the viewer`() = runTest {
+        val target = invoice(boletoPath = "https://demo.local/fatura/42.pdf")
+        stubLoaded(target)
+        coEvery { getBoletoPdf(target) } returns AppResult.success(byteArrayOf(37, 80, 68, 70))
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals("00020126-pix-copia-e-cola", state.pixCode)
-        assertFalse(state.canRequestPix)
-
-        viewModel.loadPix()
+        viewModel.openBoleto()
         dispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 0) { generatePix(any()) }
+        var state = viewModel.uiState.value
+        assertTrue(state.boletoOpen)
+        assertFalse(state.boletoLoading)
+        assertEquals(37.toByte(), state.boletoPdf?.get(0))
+        coVerify(exactly = 1) { getBoletoPdf(target) }
+
+        viewModel.closeBoleto()
+        state = viewModel.uiState.value
+        assertFalse(state.boletoOpen)
+        assertNull(state.boletoPdf)
     }
 
     @Test
-    fun `loadPix generates the PIX code for invoices that allow it`() = runTest {
-        stubLoaded(invoice(canGeneratePix = true))
-        coEvery { generatePix(42) } returns
-            AppResult.success(PixCharge(status = 1, message = "ok", code = "pix-gerado"))
+    fun `boleto download failure keeps the viewer open with an error`() = runTest {
+        val target = invoice(boletoPath = "https://demo.local/fatura/42.pdf")
+        stubLoaded(target)
+        coEvery { getBoletoPdf(target) } returns AppResult.failure(AppError.Timeout)
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.canRequestPix)
 
-        viewModel.loadPix()
+        viewModel.openBoleto()
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertFalse(state.loadingPix)
-        assertNull(state.actionError)
-        assertEquals("pix-gerado", state.generatedPix)
-        assertEquals("pix-gerado", state.pixCode)
-        assertFalse(state.canRequestPix)
-        coVerify(exactly = 1) { generatePix(42) }
+        assertTrue(state.boletoOpen)
+        assertNull(state.boletoPdf)
+        assertEquals(AppError.Timeout, state.boletoError)
     }
 
     @Test
-    fun `PIX business failure surfaces the API message as action error`() = runTest {
-        stubLoaded(invoice(canGeneratePix = true))
-        coEvery { generatePix(42) } returns
-            AppResult.success(PixCharge(status = 0, message = "PIX indisponível", code = null))
+    fun `invoice without a boleto path does not open the viewer`() = runTest {
+        stubLoaded(invoice(boletoPath = null))
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.loadPix()
+        viewModel.openBoleto()
         dispatcher.scheduler.advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertFalse(state.loadingPix)
-        assertNull(state.generatedPix)
-        assertNull(state.pixCode)
-        assertEquals(AppError.Api("PIX indisponível"), state.actionError)
-    }
-
-    @Test
-    fun `PIX transport failure surfaces the typed error`() = runTest {
-        stubLoaded(invoice(canGeneratePix = true))
-        coEvery { generatePix(42) } returns AppResult.failure(AppError.Server)
-        viewModel = viewModel(42)
-        dispatcher.scheduler.advanceUntilIdle()
-
-        viewModel.loadPix()
-        dispatcher.scheduler.advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertFalse(state.loadingPix)
-        assertEquals(AppError.Server, state.actionError)
+        assertFalse(viewModel.uiState.value.boletoOpen)
+        coVerify(exactly = 0) { getBoletoPdf(any()) }
     }
 
     @Test
@@ -289,12 +269,10 @@ class BillDetailsViewModelTest {
         stubLoaded(invoice())
         coEvery { sendCopy(42, SendChannel.EMAIL, null) } returns AppResult.success("ok")
         coEvery { requestPaymentPromise() } returns AppResult.success(promise)
-        coEvery { generatePix(42) } returns AppResult.failure(AppError.Server)
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
         viewModel.sendCopyByEmail()
         viewModel.requestPromise()
-        viewModel.loadPix()
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.consumeSentCopyMessage()

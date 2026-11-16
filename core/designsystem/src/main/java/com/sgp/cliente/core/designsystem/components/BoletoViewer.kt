@@ -1,4 +1,4 @@
-package com.sgp.cliente.feature.bills
+package com.sgp.cliente.core.designsystem.components
 
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -37,10 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sgp.cliente.core.common.error.AppError
-import com.sgp.cliente.core.designsystem.components.SgpErrorView
-import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.Spacing
-import com.sgp.cliente.domain.model.Invoice
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -54,7 +51,8 @@ private const val RENDER_SCALE = 2
  */
 @Composable
 fun BoletoViewerDialog(
-    invoice: Invoice,
+    title: String,
+    fileKey: String,
     pdf: ByteArray?,
     loading: Boolean,
     error: AppError?,
@@ -77,7 +75,7 @@ fun BoletoViewerDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = invoice.documentNumber?.let { "Boleto · Nº $it" } ?: "Boleto",
+                        text = title,
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f),
                     )
@@ -100,7 +98,7 @@ fun BoletoViewerDialog(
 
                     error != null -> SgpErrorView(error = error, onRetry = onRetry)
 
-                    pdf != null -> BoletoPages(pdf, invoice)
+                    pdf != null -> BoletoPages(pdf, fileKey)
                 }
             }
         }
@@ -108,12 +106,12 @@ fun BoletoViewerDialog(
 }
 
 @Composable
-private fun BoletoPages(pdf: ByteArray, invoice: Invoice) {
+private fun BoletoPages(pdf: ByteArray, fileKey: String) {
     val context = LocalContext.current
     val pages by produceState<Result<List<ImageBitmap>>?>(initialValue = null, pdf) {
         value = withContext(Dispatchers.IO) {
             runCatching {
-                val file = File.createTempFile("boleto-${invoice.id}-", ".pdf", context.cacheDir)
+                val file = File.createTempFile("boleto-$fileKey-", ".pdf", context.cacheDir)
                 try {
                     file.writeBytes(pdf)
                     renderPages(file)

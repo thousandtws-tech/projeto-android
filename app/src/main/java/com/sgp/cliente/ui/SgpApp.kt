@@ -61,8 +61,14 @@ fun SgpApp(
             }
             is SessionState.LoggedIn ->
                 if (navController.currentDestination?.route == Routes.LOGIN) {
+                    val loggedIn = sessionState as SessionState.LoggedIn
                     navController.navigate(Routes.MAIN) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                    // CPF with multiple contracts: ask which one to access —
+                    // the picker pops back to MAIN on selection or dismiss.
+                    if (loggedIn.session.contracts.size > 1) {
+                        navController.navigate(Routes.CONTRACTS)
                     }
                 }
             SessionState.Loading -> Unit

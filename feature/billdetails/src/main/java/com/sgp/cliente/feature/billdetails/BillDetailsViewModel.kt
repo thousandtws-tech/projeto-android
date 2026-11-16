@@ -8,9 +8,9 @@ import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
 import com.sgp.cliente.domain.model.SendChannel
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
-import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -23,26 +23,23 @@ import kotlinx.coroutines.launch
 data class BillDetailsUiState(
     val loading: Boolean = true,
     val invoice: Invoice? = null,
-    val generatedPix: String? = null,
-    val loadingPix: Boolean = false,
     val sendingCopy: Boolean = false,
     val requestingPromise: Boolean = false,
     val sentCopyMessage: String? = null,
     val promise: PaymentPromise? = null,
+    val boletoOpen: Boolean = false,
+    val boletoPdf: ByteArray? = null,
+    val boletoLoading: Boolean = false,
+    val boletoError: AppError? = null,
     val error: AppError? = null,
     val actionError: AppError? = null,
-) {
-    /** PIX code available without an extra call comes from the list payload. */
-    val pixCode: String? get() = invoice?.pixCode ?: generatedPix
-    val canRequestPix: Boolean
-        get() = pixCode == null && invoice?.canGeneratePix == true
-}
+)
 
 @HiltViewModel
 class BillDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getDetails: GetInvoiceDetailsUseCase,
-    private val generatePix: GeneratePixUseCase,
+    private val getBoletoPdf: GetBoletoPdfUseCase,
     private val sendCopy: SendInvoiceCopyUseCase,
     private val requestPaymentPromise: RequestPaymentPromiseUseCase,
 ) : ViewModel() {
@@ -78,27 +75,38 @@ class BillDetailsViewModel @Inject constructor(
         }
     }
 
-    fun loadPix() {
-        val id = invoiceId ?: return
-        if (_uiState.value.loadingPix || _uiState.value.pixCode != null) return
+    /** Downloads the boleto PDF and opens the in-app viewer. */
+    fun openBoleto() {
+        val invoice = _uiState.value.invoice ?: return
+        if (invoice.boletoPath == null) return
+        if (_uiState.value.boletoLoading) return
+        if (_uiState.value.boletoOpen && _uiState.value.boletoPdf != null) return
         viewModelScope.launch {
-            _uiState.update { it.copy(loadingPix = true, actionError = null) }
-            generatePix(id).fold(
-                onSuccess = { pix ->
+            _uiState.update {
+                it.copy(boletoOpen = true, boletoLoading = true, boletoError = null)
+            }
+            getBoletoPdf(invoice).fold(
+                onSuccess = { pdf ->
                     _uiState.update {
-                        it.copy(
-                            loadingPix = false,
-                            generatedPix = pix.code,
-                            actionError = if (pix.isSuccess) null
-                            else AppError.Api(pix.message),
-                        )
+                        it.copy(boletoPdf = pdf, boletoLoading = false)
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update { it.copy(loadingPix = false, actionError = error) }
+                    _uiState.update {
+                        it.copy(boletoLoading = false, boletoError = error)
+                    }
                 },
             )
         }
+    }
+
+    fun closeBoleto() = _uiState.update {
+        it.copy(
+            boletoOpen = false,
+            boletoPdf = null,
+            boletoError = null,
+            boletoLoading = false,
+        )
     }
 
     fun sendCopyByEmail() = send(SendChannel.EMAIL)

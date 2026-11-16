@@ -196,6 +196,29 @@ class InvoiceRepositoryImplTest {
     }
 
     @Test
+    fun `open filter keeps only the earliest payable competence`() = runTest {
+        stubPage(
+            InvoiceGroup.ALL,
+            result = CentralInvoicePage(
+                items = listOf(
+                    CentralInvoiceDto(id = 1, status = "Em aberto", dueDate = "10/03/2026"),
+                    CentralInvoiceDto(id = 2, status = "Atrasada", dueDate = "10/01/2026"),
+                    CentralInvoiceDto(id = 3, status = "Em aberto", dueDate = "10/01/2026"),
+                    CentralInvoiceDto(id = 4, status = "Em aberto", dueDate = "10/04/2026"),
+                    CentralInvoiceDto(id = 5, status = "Pago", dueDate = "10/01/2026"),
+                ),
+                total = 5,
+            ),
+        )
+
+        val open = repository.getInvoices(101, statusFilter = 1).getOrNull()!!
+
+        // January wins over March/April; the paid January row is untouched
+        // by the rule and both open January boletos stay (same competence).
+        assertEquals(listOf(2, 3), open.items.map { it.id })
+    }
+
+    @Test
     fun `filtered page keeps pagination of the raw stream`() = runTest {
         // Filter drops everything visible but the stream still has pages —
         // consumed carries the raw count so nextOffset/hasMore stay honest.
