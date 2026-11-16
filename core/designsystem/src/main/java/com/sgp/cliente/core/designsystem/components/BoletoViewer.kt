@@ -4,8 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -34,6 +40,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sgp.cliente.core.common.error.AppError
@@ -54,6 +61,7 @@ fun BoletoViewerDialog(
     title: String,
     fileKey: String,
     pdf: ByteArray?,
+    webUrl: String? = null,
     loading: Boolean,
     error: AppError?,
     onRetry: () -> Unit,
@@ -98,8 +106,45 @@ fun BoletoViewerDialog(
 
                     error != null -> SgpErrorView(error = error, onRetry = onRetry)
 
+                    webUrl != null -> BoletoWebPage(webUrl)
+
                     pdf != null -> BoletoPages(pdf, fileKey)
                 }
+            }
+        }
+    }
+}
+
+/** Bank-format boleto ("formato banco"): the provider `link` answers an
+ * HTML boleto page rather than a local PDF — rendered in-app in a
+ * WebView so the client never leaves the sheet. */
+@Composable
+private fun BoletoWebPage(url: String) {
+    var pageLoading by remember { mutableStateOf(true) }
+    Box(Modifier.fillMaxSize()) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                WebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            pageLoading = false
+                        }
+                    }
+                    loadUrl(url)
+                }
+            },
+        )
+        if (pageLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(Spacing.md))
+                Text("A carregar o boleto…", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

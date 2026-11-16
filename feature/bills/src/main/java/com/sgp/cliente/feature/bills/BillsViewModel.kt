@@ -8,7 +8,8 @@ import com.sgp.cliente.core.common.logging.AppLog
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
-import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
+import com.sgp.cliente.domain.model.BoletoContent
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoicesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -32,8 +33,8 @@ data class BillsUiState(
     val error: AppError? = null,
     /** Invoice whose boleto PDF is shown in the in-app viewer. */
     val boletoInvoice: Invoice? = null,
-    /** Downloaded boleto PDF bytes (rendered by the viewer). */
-    val boletoPdf: ByteArray? = null,
+    /** Downloaded boleto content — PDF pages or a bank web page. */
+    val boleto: BoletoContent? = null,
     val boletoLoading: Boolean = false,
     val boletoError: AppError? = null,
 ) {
@@ -71,7 +72,7 @@ data class OpenSummary(
 @HiltViewModel
 class BillsViewModel @Inject constructor(
     private val getInvoices: GetInvoicesUseCase,
-    private val getBoletoPdf: GetBoletoPdfUseCase,
+    private val getBoleto: GetBoletoUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillsUiState())
@@ -161,28 +162,28 @@ class BillsViewModel @Inject constructor(
     }
 
     /**
-     * "Abrir boleto" / PIX-in-boleto on a card: fetch the pre-signed PDF
+     * "Abrir boleto" on a card: fetch the pre-signed boleto content
      * through the API client and hand the bytes to the in-app viewer.
      * Re-tapping the same invoice while it is open is a no-op.
      */
     fun openBoleto(invoice: Invoice) {
         if (invoice.boletoPath == null) return
         val state = _uiState.value
-        if (state.boletoInvoice?.id == invoice.id && (state.boletoLoading || state.boletoPdf != null)) {
+        if (state.boletoInvoice?.id == invoice.id && (state.boletoLoading || state.boleto != null)) {
             return
         }
         _uiState.update {
             it.copy(
                 boletoInvoice = invoice,
-                boletoPdf = null,
+                boleto = null,
                 boletoError = null,
                 boletoLoading = true,
             )
         }
         viewModelScope.launch {
-            getBoletoPdf(invoice).fold(
-                onSuccess = { bytes ->
-                    _uiState.update { it.copy(boletoPdf = bytes, boletoLoading = false) }
+            getBoleto(invoice).fold(
+                onSuccess = { content ->
+                    _uiState.update { it.copy(boleto = content, boletoLoading = false) }
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(boletoError = error, boletoLoading = false) }
@@ -192,7 +193,7 @@ class BillsViewModel @Inject constructor(
     }
 
     fun closeBoleto() = _uiState.update {
-        it.copy(boletoInvoice = null, boletoPdf = null, boletoError = null, boletoLoading = false)
+        it.copy(boletoInvoice = null, boleto = null, boletoError = null, boletoLoading = false)
     }
 
     private companion object {

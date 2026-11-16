@@ -12,6 +12,7 @@ import com.sgp.cliente.data.mapper.toSecondCopy
 import com.sgp.cliente.data.remote.centralapp.CentralAppRemoteDataSource
 import com.sgp.cliente.data.remote.centralapp.CentralEntryDto
 import com.sgp.cliente.data.remote.centralapp.InvoiceGroup
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.CentralOption
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
@@ -330,9 +331,30 @@ class InvoiceRepositoryImpl @Inject constructor(
         )
     }
 
-    /** Pre-signed `link` GET — no contract fields, no auth retry. */
-    override suspend fun getBoletoPdf(url: String): AppResult<ByteArray> =
-        remote.downloadBoleto(url)
+    /** Pre-signed `link` GET — no contract fields, no auth retry. Local
+     * boletos come back as PDF; "formato banco" links answer the bank's
+     * HTML boleto page, which the UI renders in a web view instead. */
+    override suspend fun getBoleto(url: String): AppResult<BoletoContent> =
+        remote.downloadBoleto(url).map { bytes ->
+            when {
+                bytes.isPdf() -> BoletoContent.Pdf(bytes)
+                bytes.looksLikeHtml() -> BoletoContent.ExternalPage(url)
+                else -> return AppResult.failure(
+                    AppError.Api("O boleto ainda não foi gerado para esta fatura. Tente novamente mais tarde."),
+                )
+            }
+        }
+
+    private fun ByteArray.isPdf(): Boolean =
+        size >= 4 && this[0] == '%'.code.toByte() && this[1] == 'P'.code.toByte() &&
+            this[2] == 'D'.code.toByte() && this[3] == 'F'.code.toByte()
+
+    /** Sniffs an HTML answer (bank boleto page): first non-whitespace
+     * byte is `<` (`<!DOCTYPE`, `<html`, …) or a UTF-8 BOM precedes it. */
+    private fun ByteArray.looksLikeHtml(): Boolean {
+        val head = take(512).toByteArray().toString(Charsets.UTF_8).trimStart('﻿', ' ', '\t', '\n', '\r')
+        return head.startsWith("<")
+    }
 
     /** `link`/`chargeUrl` arrive relative to the API host — resolve once so
      * consumers can open the boleto without knowing the base URL. */

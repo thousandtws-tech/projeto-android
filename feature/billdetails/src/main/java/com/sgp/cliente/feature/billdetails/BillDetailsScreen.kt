@@ -40,6 +40,7 @@ import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
 import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.Spacing
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.InvoiceStatus
 import java.time.LocalDate
 
@@ -103,7 +104,8 @@ fun BillDetailsSheet(
         BoletoViewerDialog(
             title = invoice?.documentNumber?.let { "Boleto · Nº $it" } ?: "Boleto",
             fileKey = invoice?.id?.toString() ?: "invoice",
-            pdf = uiState.boletoPdf,
+            pdf = (uiState.boleto as? BoletoContent.Pdf)?.bytes,
+            webUrl = (uiState.boleto as? BoletoContent.ExternalPage)?.url,
             loading = uiState.boletoLoading,
             error = uiState.boletoError,
             onRetry = viewModel::openBoleto,

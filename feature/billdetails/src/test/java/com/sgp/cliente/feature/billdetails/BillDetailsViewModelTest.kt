@@ -6,7 +6,8 @@ import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
 import com.sgp.cliente.domain.model.SendChannel
-import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
+import com.sgp.cliente.domain.model.BoletoContent
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
@@ -33,7 +34,7 @@ class BillDetailsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val getDetails: GetInvoiceDetailsUseCase = mockk()
-    private val getBoletoPdf: GetBoletoPdfUseCase = mockk()
+    private val getBoleto: GetBoletoUseCase = mockk()
     private val sendCopy: SendInvoiceCopyUseCase = mockk()
     private val requestPaymentPromise: RequestPaymentPromiseUseCase = mockk()
     private lateinit var viewModel: BillDetailsViewModel
@@ -71,7 +72,7 @@ class BillDetailsViewModelTest {
         } else {
             SavedStateHandle(mapOf("invoiceId" to invoiceId))
         }
-        return BillDetailsViewModel(handle, getDetails, getBoletoPdf, sendCopy, requestPaymentPromise)
+        return BillDetailsViewModel(handle, getDetails, getBoleto, sendCopy, requestPaymentPromise)
     }
 
     private fun stubLoaded(invoice: Invoice) {
@@ -148,7 +149,7 @@ class BillDetailsViewModelTest {
     fun `openBoleto downloads the pdf and close clears the viewer`() = runTest {
         val target = invoice(boletoPath = "https://demo.local/fatura/42.pdf")
         stubLoaded(target)
-        coEvery { getBoletoPdf(target) } returns AppResult.success(byteArrayOf(37, 80, 68, 70))
+        coEvery { getBoleto(target) } returns AppResult.success(BoletoContent.Pdf(byteArrayOf(37, 80, 68, 70)))
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
 
@@ -158,20 +159,20 @@ class BillDetailsViewModelTest {
         var state = viewModel.uiState.value
         assertTrue(state.boletoOpen)
         assertFalse(state.boletoLoading)
-        assertEquals(37.toByte(), state.boletoPdf?.get(0))
-        coVerify(exactly = 1) { getBoletoPdf(target) }
+        assertEquals(37.toByte(), (state.boleto as? BoletoContent.Pdf)?.bytes?.get(0))
+        coVerify(exactly = 1) { getBoleto(target) }
 
         viewModel.closeBoleto()
         state = viewModel.uiState.value
         assertFalse(state.boletoOpen)
-        assertNull(state.boletoPdf)
+        assertNull(state.boleto)
     }
 
     @Test
     fun `boleto download failure keeps the viewer open with an error`() = runTest {
         val target = invoice(boletoPath = "https://demo.local/fatura/42.pdf")
         stubLoaded(target)
-        coEvery { getBoletoPdf(target) } returns AppResult.failure(AppError.Timeout)
+        coEvery { getBoleto(target) } returns AppResult.failure(AppError.Timeout)
         viewModel = viewModel(42)
         dispatcher.scheduler.advanceUntilIdle()
 
@@ -180,7 +181,7 @@ class BillDetailsViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.boletoOpen)
-        assertNull(state.boletoPdf)
+        assertNull(state.boleto)
         assertEquals(AppError.Timeout, state.boletoError)
     }
 
@@ -194,7 +195,7 @@ class BillDetailsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.boletoOpen)
-        coVerify(exactly = 0) { getBoletoPdf(any()) }
+        coVerify(exactly = 0) { getBoleto(any()) }
     }
 
     @Test

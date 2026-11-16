@@ -8,7 +8,8 @@ import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.PaymentPromise
 import com.sgp.cliente.domain.model.SendChannel
-import com.sgp.cliente.domain.usecase.invoice.GetBoletoPdfUseCase
+import com.sgp.cliente.domain.model.BoletoContent
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetInvoiceDetailsUseCase
 import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
@@ -28,7 +29,7 @@ data class BillDetailsUiState(
     val sentCopyMessage: String? = null,
     val promise: PaymentPromise? = null,
     val boletoOpen: Boolean = false,
-    val boletoPdf: ByteArray? = null,
+    val boleto: BoletoContent? = null,
     val boletoLoading: Boolean = false,
     val boletoError: AppError? = null,
     val error: AppError? = null,
@@ -39,7 +40,7 @@ data class BillDetailsUiState(
 class BillDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getDetails: GetInvoiceDetailsUseCase,
-    private val getBoletoPdf: GetBoletoPdfUseCase,
+    private val getBoleto: GetBoletoUseCase,
     private val sendCopy: SendInvoiceCopyUseCase,
     private val requestPaymentPromise: RequestPaymentPromiseUseCase,
 ) : ViewModel() {
@@ -80,15 +81,15 @@ class BillDetailsViewModel @Inject constructor(
         val invoice = _uiState.value.invoice ?: return
         if (invoice.boletoPath == null) return
         if (_uiState.value.boletoLoading) return
-        if (_uiState.value.boletoOpen && _uiState.value.boletoPdf != null) return
+        if (_uiState.value.boletoOpen && _uiState.value.boleto != null) return
         viewModelScope.launch {
             _uiState.update {
                 it.copy(boletoOpen = true, boletoLoading = true, boletoError = null)
             }
-            getBoletoPdf(invoice).fold(
-                onSuccess = { pdf ->
+            getBoleto(invoice).fold(
+                onSuccess = { content ->
                     _uiState.update {
-                        it.copy(boletoPdf = pdf, boletoLoading = false)
+                        it.copy(boleto = content, boletoLoading = false)
                     }
                 },
                 onFailure = { error ->
@@ -103,7 +104,7 @@ class BillDetailsViewModel @Inject constructor(
     fun closeBoleto() = _uiState.update {
         it.copy(
             boletoOpen = false,
-            boletoPdf = null,
+            boleto = null,
             boletoError = null,
             boletoLoading = false,
         )

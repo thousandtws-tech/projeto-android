@@ -1,8 +1,10 @@
 package com.sgp.cliente.data.repository
 
+import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
 import com.sgp.cliente.core.network.api.BaseUrlProvider
 import com.sgp.cliente.data.remote.centralapp.CentralAppRemoteDataSource
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.data.remote.centralapp.CentralInvoiceDto
 import com.sgp.cliente.data.remote.centralapp.CentralInvoicePage
 import com.sgp.cliente.data.remote.centralapp.InvoiceGroup
@@ -324,6 +326,39 @@ class InvoiceRepositoryImplTest {
             "https://pgw.exemplo.com/c/xyz",
             result.getOrNull()!!.items.single().boletoPath,
         )
+    }
+
+    @Test
+    fun `getBoleto returns Pdf content for local boleto bytes`() = runTest {
+        val pdf = byteArrayOf('%'.code.toByte(), 'P'.code.toByte(), 'D'.code.toByte(), 'F'.code.toByte(), 1, 2)
+        coEvery { remote.downloadBoleto("https://demo.local/b/1") } returns AppResult.success(pdf)
+
+        val result = repository.getBoleto("https://demo.local/b/1").getOrNull()!!
+
+        assertTrue(result is BoletoContent.Pdf)
+        assertEquals(6, (result as BoletoContent.Pdf).bytes.size)
+    }
+
+    @Test
+    fun `getBoleto returns ExternalPage for bank html answers`() = runTest {
+        val html = "<!DOCTYPE html><html><body>Boleto</body></html>".toByteArray()
+        coEvery { remote.downloadBoleto("https://banco.exemplo.com/b/2") } returns AppResult.success(html)
+
+        val result = repository.getBoleto("https://banco.exemplo.com/b/2").getOrNull()!!
+
+        assertTrue(result is BoletoContent.ExternalPage)
+        assertEquals("https://banco.exemplo.com/b/2", (result as BoletoContent.ExternalPage).url)
+    }
+
+    @Test
+    fun `getBoleto fails honestly on non-pdf non-html payloads`() = runTest {
+        coEvery { remote.downloadBoleto("https://demo.local/b/3") } returns
+            AppResult.success("500".toByteArray())
+
+        val result = repository.getBoleto("https://demo.local/b/3")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.errorOrNull() is AppError.Api)
     }
 
     @Test

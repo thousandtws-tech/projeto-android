@@ -63,3 +63,13 @@ enum class InvoiceStatus(val apiId: Int) {
         fun fromId(id: Int): InvoiceStatus = entries.firstOrNull { it.apiId == id } ?: UNKNOWN
     }
 }
+
+/**
+ * What an invoice `link` actually serves — providers emit both shapes:
+ * a locally generated PDF or a bank-hosted boleto page (HTML). The UI
+ * renders the first in-app and opens the second in a web view.
+ */
+sealed interface BoletoContent {
+    class Pdf(val bytes: ByteArray) : BoletoContent
+    class ExternalPage(val url: String) : BoletoContent
+}

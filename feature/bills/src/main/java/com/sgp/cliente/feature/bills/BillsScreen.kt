@@ -78,8 +78,8 @@ import com.sgp.cliente.core.designsystem.adaptive.currentWindowWidthSizeClass
 import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
 import com.sgp.cliente.core.designsystem.components.SgpCard
 import com.sgp.cliente.core.designsystem.components.SgpEmptyState
-import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.BoletoViewerDialog
+import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceCard
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonInvoiceList
@@ -90,6 +90,7 @@ import com.sgp.cliente.core.designsystem.theme.Spacing
 import com.sgp.cliente.core.designsystem.theme.StatusCancelled
 import com.sgp.cliente.core.designsystem.theme.StatusOpen
 import com.sgp.cliente.core.designsystem.theme.StatusPaid
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
 import java.time.LocalDate
@@ -170,7 +171,8 @@ fun BillsScreen(
         BoletoViewerDialog(
             title = invoice.documentNumber?.let { "Boleto · Nº $it" } ?: "Boleto",
             fileKey = invoice.id.toString(),
-            pdf = uiState.boletoPdf,
+            pdf = (uiState.boleto as? BoletoContent.Pdf)?.bytes,
+            webUrl = (uiState.boleto as? BoletoContent.ExternalPage)?.url,
             loading = uiState.boletoLoading,
             error = uiState.boletoError,
             onRetry = { viewModel.openBoleto(invoice) },

@@ -5,6 +5,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ## [Unreleased]
 
 ### Adicionado
+- Boleto "formato banco": `link` que responde página HTML do banco (em
+  vez de PDF local) agora abre em WebView dentro do viewer — antes
+  exibia "boleto não gerado" por ser não-PDF. `getBoleto` classifica o
+  payload (`%PDF` → `BoletoContent.Pdf`, HTML → `ExternalPage`, resto →
+  erro honesto) e `BoletoViewerDialog` ganhou `webUrl` + `BoletoWebPage`.
 - Detalhes da fatura com ação "Abrir boleto" (botão primário cheio) que
   baixa o PDF e abre o viewer in-app — antes só existia na lista.
 - `BoletoViewerDialog` promovido a `core:designsystem` (desacoplado de
