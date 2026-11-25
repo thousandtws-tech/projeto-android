@@ -109,6 +109,17 @@ class DashboardViewModel @Inject constructor(
         loadBanners()
     }
 
+    /**
+     * Refaz só os feeds leves (banners CMS + status) ao voltar pro
+     * foreground — o caso em que o push `cms_refresh` se perdeu com o
+     * app morto/restrito em background. Faturas ficam no pull-to-refresh
+     * (a consulta ao SGP é a mais pesada das três).
+     */
+    fun refreshFeeds() {
+        loadServiceStatus()
+        loadBanners()
+    }
+
     fun logout() {
         viewModelScope.launch { logoutUseCase() }
     }
