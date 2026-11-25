@@ -2,7 +2,7 @@
 
 ## Título do app
 
-Central do Assinante JD FIBRA
+JD FIBRA
 
 ## Descrição curta (80 caracteres — usar exatamente)
 
@@ -10,7 +10,7 @@ Faturas, PIX, 2ª via e status da sua internet JD FIBRA num só lugar
 
 ## Descrição completa (4000 caracteres — usar exatamente)
 
-Central do Assinante JD FIBRA
+JD FIBRA — Central do Assinante
 
 O app oficial do assinante JD FIBRA: sua conta, suas faturas e o status da sua conexão — tudo na palma da mão, sem ligação, sem fila, sem burocracia.
 

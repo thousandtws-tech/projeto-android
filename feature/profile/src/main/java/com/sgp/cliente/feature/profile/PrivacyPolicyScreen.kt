@@ -28,15 +28,15 @@ private data class PolicySection(val title: String, val body: String)
 private val sections = listOf(
     PolicySection(
         "1. Quem trata seus dados",
-        "Este aplicativo é o canal de acesso à Central do Assinante do seu " +
-            "provedor de internet. O controlador dos seus dados pessoais é o " +
+        "Este aplicativo é o canal oficial da JD FIBRA, seu provedor de " +
+            "internet. O controlador dos seus dados pessoais é o " +
             "próprio provedor, com quem você mantém o contrato de serviço. " +
             "O app apenas exibe, no seu dispositivo, as informações que a API " +
             "oficial do provedor retorna.",
     ),
     PolicySection(
         "2. Dados coletados",
-        "• CPF ou CNPJ e a senha da Central do Assinante — usados somente " +
+        "• CPF ou CNPJ e a senha do app JD FIBRA — usados somente " +
             "para autenticar junto ao provedor.\n" +
             "• Dados do contrato, faturas, códigos de pagamento e promessas — " +
             "são lidos da API e exibidos a você; não são armazenados além de " +
@@ -89,7 +89,7 @@ private val sections = listOf(
         "9. Encarregado de dados (DPO)",
         "Dúvidas e solicitações sobre dados pessoais devem ser dirigidas ao " +
             "encarregado indicado pelo seu provedor de internet, pelos canais " +
-            "oficiais de atendimento (Central do Assinante, site ou telefone).",
+            "oficiais de atendimento (app JD FIBRA, site ou telefone).",
     ),
     PolicySection(
         "10. Legislação aplicável",

@@ -81,7 +81,7 @@ private const val TAB_LOGIN = 0
 private const val TAB_SIGNUP = 1
 
 private const val ACCESS_HELP_MESSAGE =
-    "Olá! Não sei meu acesso à Central do Assinante. Pode me ajudar?"
+    "Olá! Não sei meu acesso ao app JD FIBRA. Pode me ajudar?"
 
 private const val HERO_WEIGHT = 0.36f
 private const val SHEET_WEIGHT = 0.64f
@@ -336,7 +336,7 @@ private fun LoginForm(
         )
 
         Text(
-            text = "Use o CPF/CNPJ ou usuário e a senha cadastrados na Central do Assinante do seu provedor.",
+            text = "Use o CPF/CNPJ ou usuário e a senha cadastrados na JD FIBRA.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
