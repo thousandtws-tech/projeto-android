@@ -1,12 +1,15 @@
 # Google Play — Listagem (PT-BR)
 
 ## Título do app
+
 Central do Assinante JD FIBRA
 
 ## Descrição curta (80 caracteres — usar exatamente)
+
 Faturas, PIX, 2ª via e status da sua internet JD FIBRA num só lugar
 
 ## Descrição completa (4000 caracteres — usar exatamente)
+
 Central do Assinante JD FIBRA
 
 O app oficial do assinante JD FIBRA: sua conta, suas faturas e o status da sua conexão — tudo na palma da mão, sem ligação, sem fila, sem burocracia.
@@ -35,12 +38,15 @@ QUER SER CLIENTE?
 Baixe agora e tenha a JD FIBRA sempre com você.
 
 ## Categoria sugerida
+
 Finanças (ou Ferramentas)
 
 ## Tags/palavras-chave trabalhadas
+
 fatura, PIX, segunda via, boleto, internet, fibra, provedor, assinante
 
 ## Assets da listagem (na pasta)
+
 - `playstore-icon-512.png` — ícone 512×512
 - `feature-graphic-1024x500.png` — imagem de destaque
 - `screenshots/` — 10 capturas (mínimo exigido: 2)
