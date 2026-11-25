@@ -29,8 +29,17 @@ class PushTokenRegistrar @Inject constructor(
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    /** @return true quando o backend confirmou o registro. */
-    suspend fun register(token: String, subscriberId: String? = null): Boolean =
+    /**
+     * @param serviceOnline último `disponivel` do `rede/status` do SGP
+     *   observado pelo app — `null` = heartbeat puro (o CRM mantém o
+     *   último status conhecido).
+     * @return true quando o backend confirmou o registro.
+     */
+    suspend fun register(
+        token: String,
+        subscriberId: String? = null,
+        serviceOnline: Boolean? = null,
+    ): Boolean =
         withContext(Dispatchers.IO) {
             val baseUrl = config.crmApiUrl?.trim()?.trimEnd('/')
             if (baseUrl.isNullOrEmpty()) {
@@ -41,6 +50,7 @@ class PushTokenRegistrar @Inject constructor(
                 put("token", token)
                 put("platform", "android")
                 subscriberId?.takeIf(String::isNotBlank)?.let { put("subscriberId", it) }
+                serviceOnline?.let { put("serviceOnline", it) }
             }.toString().toRequestBody(JSON_MEDIA_TYPE)
 
             try {

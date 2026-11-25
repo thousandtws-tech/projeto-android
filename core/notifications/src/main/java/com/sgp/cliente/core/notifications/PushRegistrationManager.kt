@@ -41,14 +41,22 @@ class PushRegistrationManager @Inject constructor(
         }
     }
 
-    private suspend fun syncAll(subscriberId: String) {
+    /**
+     * Reporta o último status do serviço observado no `rede/status` do
+     * SGP — o dashboard chama após cada consulta. O POST /devices também
+     * atualiza o `last_seen_at` (heartbeat) no CRM.
+     */
+    suspend fun reportServiceStatus(subscriberId: String, online: Boolean) =
+        syncAll(subscriberId, online)
+
+    private suspend fun syncAll(subscriberId: String, serviceOnline: Boolean? = null) {
         if (syncs.isEmpty()) {
             Timber.d("sem provider de push no build — registro ignorado")
             return
         }
         syncs.forEach { sync ->
             try {
-                sync.syncNow(subscriberId)
+                sync.syncNow(subscriberId, serviceOnline)
             } catch (error: Exception) {
                 Timber.w(error, "falha ao sincronizar token push")
             }

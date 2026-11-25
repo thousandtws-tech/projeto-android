@@ -29,6 +29,7 @@ dependencies {
 
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:notifications"))
     implementation(project(":domain"))
 
     implementation(platform(libs.androidx.compose.bom))

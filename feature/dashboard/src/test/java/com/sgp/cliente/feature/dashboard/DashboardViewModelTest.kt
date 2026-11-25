@@ -2,6 +2,7 @@ package com.sgp.cliente.feature.dashboard
 
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
+import com.sgp.cliente.core.notifications.PushRegistrationManager
 import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
@@ -54,6 +55,7 @@ class DashboardViewModelTest {
     private val sendCopy: SendInvoiceCopyUseCase = mockk()
     private val observeBanners: ObserveBannersUseCase = mockk()
     private val refreshBanners: RefreshBannersUseCase = mockk()
+    private val pushRegistration: PushRegistrationManager = mockk(relaxed = true)
     private val bannerItems = MutableStateFlow<List<Banner>>(emptyList())
     private lateinit var viewModel: DashboardViewModel
 
@@ -110,7 +112,8 @@ class DashboardViewModelTest {
 
     private fun createViewModel(copySendEnabled: Boolean = false) = DashboardViewModel(
         observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        getBoleto, sendCopy, observeBanners, refreshBanners, copySendEnabled,
+        getBoleto, sendCopy, observeBanners, refreshBanners, pushRegistration,
+        copySendEnabled,
     )
 
     @Test

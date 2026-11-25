@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.fold
 import com.sgp.cliente.core.common.result.onSuccess
+import com.sgp.cliente.core.notifications.PushRegistrationManager
 import com.sgp.cliente.domain.model.Banner
 import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Contract
@@ -67,6 +68,7 @@ class DashboardViewModel @Inject constructor(
     private val sendCopy: SendInvoiceCopyUseCase,
     private val observeBanners: ObserveBannersUseCase,
     private val refreshBanners: RefreshBannersUseCase,
+    private val pushRegistration: PushRegistrationManager,
     @Named("sendInvoiceCopyEnabled") val copySendEnabled: Boolean,
 ) : ViewModel() {
 
@@ -141,8 +143,19 @@ class DashboardViewModel @Inject constructor(
             checkServiceStatus()
                 .onSuccess { status ->
                     _uiState.update { it.copy(serviceStatus = status) }
+                    reportServiceStatus(status)
                 }
         }
+    }
+
+    /**
+     * Espelha o status observado no CRM — o POST /devices carrega o
+     * `serviceOnline` e de quebra atualiza o `last_seen` (heartbeat)
+     * do aparelho no painel. Best-effort: falha não polui a dashboard.
+     */
+    private suspend fun reportServiceStatus(status: ServiceStatus) {
+        val login = _uiState.value.session?.credentials?.login ?: return
+        pushRegistration.reportServiceStatus(login, status.isOnline)
     }
 
     // -- Segunda via (modal do card) ------------------------------------------

@@ -26,14 +26,14 @@ class FcmPushTokenSync @Inject constructor(
     private val registrar: PushTokenRegistrar,
 ) : PushTokenSync {
 
-    override suspend fun syncNow(subscriberId: String?) {
+    override suspend fun syncNow(subscriberId: String?, serviceOnline: Boolean?) {
         val token = try {
             fetchToken()
         } catch (error: Exception) {
             Timber.w(error, "falha ao obter token FCM")
             return
         }
-        registrar.register(token, subscriberId)
+        registrar.register(token, subscriberId, serviceOnline)
     }
 
     /** `FirebaseMessaging.token` é Task-based — await manual para não

@@ -17,8 +17,10 @@ interface PushTokenSync {
      * Busca o token atual no provider e registra no CRM.
      * [subscriberId] = login do assinante (CPF/CNPJ/usuário) — é a chave
      * que o CRM usa pra segmentar broadcasts por assinante.
+     * [serviceOnline] = último `disponivel` do `rede/status` do SGP
+     * observado; `null` = heartbeat puro (não altera o status gravado).
      */
-    suspend fun syncNow(subscriberId: String?)
+    suspend fun syncNow(subscriberId: String?, serviceOnline: Boolean? = null)
 }
 
 @Module
