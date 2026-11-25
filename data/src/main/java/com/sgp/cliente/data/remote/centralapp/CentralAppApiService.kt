@@ -2,6 +2,7 @@ package com.sgp.cliente.data.remote.centralapp
 
 import kotlinx.serialization.json.JsonElement
 import okhttp3.ResponseBody
+import retrofit2.http.Body
 import retrofit2.http.FieldMap
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -109,6 +110,15 @@ interface CentralAppApiService {
     @FormUrlEncoded
     @POST("api/centralapp/info/")
     suspend fun info(@FieldMap fields: Map<String, String>): CentralInfoDto
+
+    /**
+     * Changes the subscriber password. Unlike the form-encoded endpoints,
+     * this one takes a **JSON** body (`{token, contrato, nome,
+     * currentPassword, newPassword}`) — form payloads are ignored by its
+     * auth layer and answered as "credentials not provided".
+     */
+    @POST("api/centralapp/alterarsenha/")
+    suspend fun changePassword(@Body body: CentralChangePasswordRequest): CentralMessageDto
 
     /**
      * Raw download of a pre-signed resource on this host — invoice boleto

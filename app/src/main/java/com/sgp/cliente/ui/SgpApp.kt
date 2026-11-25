@@ -33,20 +33,23 @@ import com.sgp.cliente.feature.contracts.ContractsScreen
 import com.sgp.cliente.feature.onboarding.OnboardingScreen
 import com.sgp.cliente.feature.profile.PreferencesScreen
 import com.sgp.cliente.feature.profile.PrivacyPolicyScreen
-import com.sgp.cliente.feature.profile.ServerConfigScreen
 
 object Routes {
     const val LOGIN = "login"
     const val ONBOARDING = "onboarding"
-    const val SERVER_CONFIG = "server_config"
     const val CONTRACTS = "contracts"
     const val MAIN = "main"
     const val PRIVACY = "privacy"
     const val PREFERENCES = "preferences"
 }
 
+/** Toque numa notificação push — `type`/`notificationId` do payload
+ * FCM; `invoice` abre a aba Faturas ao entrar na área logada. */
+data class NotificationDeepLink(val type: String, val id: String?)
+
 @Composable
 fun SgpApp(
+    deepLink: NotificationDeepLink? = null,
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController = rememberNavController(),
 ) {
@@ -95,7 +98,6 @@ fun SgpApp(
             when (sessionState) {
                 SessionState.Loading -> SgpLoadingView(Modifier.fillMaxSize())
                 else -> LoginScreen(
-                    onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
                     supportWhatsApp = EnvConfig.SUPPORT_WHATSAPP,
                 )
             }
@@ -112,10 +114,6 @@ fun SgpApp(
             )
         }
 
-        composable(Routes.SERVER_CONFIG) {
-            ServerConfigScreen(onBack = { navController.popBackStack() })
-        }
-
         composable(Routes.PRIVACY) {
             PrivacyPolicyScreen(onBack = { navController.popBackStack() })
         }
@@ -123,7 +121,6 @@ fun SgpApp(
         composable(Routes.PREFERENCES) {
             PreferencesScreen(
                 onBack = { navController.popBackStack() },
-                onConfigureServer = { navController.navigate(Routes.SERVER_CONFIG) },
             )
         }
 
@@ -141,6 +138,7 @@ fun SgpApp(
                 onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
                 onOpenContracts = { navController.navigate(Routes.CONTRACTS) },
                 viewModelStoreOwner = entry,
+                pendingNotification = deepLink,
             )
             invoiceDetailId?.let { id ->
                 BillDetailsSheet(invoiceId = id, onDismiss = { invoiceDetailId = null })

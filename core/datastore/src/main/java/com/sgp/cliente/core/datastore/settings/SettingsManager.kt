@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sgp.cliente.domain.model.TenantBranding
 import com.sgp.cliente.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -52,6 +53,16 @@ class SettingsManager @Inject constructor(
     override val ticketUpdatesEnabled: Flow<Boolean> =
         store.data.map { it[Keys.NOTIFY_TICKET_UPDATES] ?: true }
 
+    override val branding: Flow<TenantBranding> =
+        store.data.map { prefs ->
+            TenantBranding(
+                name = prefs[Keys.BRAND_NAME]?.takeIf(String::isNotBlank),
+                logoUrl = prefs[Keys.BRAND_LOGO_URL]?.takeIf(String::isNotBlank),
+                primaryColor = prefs[Keys.BRAND_PRIMARY_COLOR]?.takeIf(String::isNotBlank),
+                accentColor = prefs[Keys.BRAND_ACCENT_COLOR]?.takeIf(String::isNotBlank),
+            )
+        }
+
     override suspend fun setCentral(id: Int?, token: String?) {
         store.edit { prefs ->
             if (id == null) prefs.remove(Keys.CENTRAL_ID) else prefs[Keys.CENTRAL_ID] = id
@@ -71,6 +82,18 @@ class SettingsManager @Inject constructor(
         }
     }
 
+    override suspend fun setBranding(branding: TenantBranding) {
+        store.edit { prefs ->
+            fun setOrClear(key: Preferences.Key<String>, value: String?) {
+                if (value.isNullOrBlank()) prefs.remove(key) else prefs[key] = value.trim()
+            }
+            setOrClear(Keys.BRAND_NAME, branding.name)
+            setOrClear(Keys.BRAND_LOGO_URL, branding.logoUrl)
+            setOrClear(Keys.BRAND_PRIMARY_COLOR, branding.primaryColor)
+            setOrClear(Keys.BRAND_ACCENT_COLOR, branding.accentColor)
+        }
+    }
+
     private object Keys {
         val BASE_URL_OVERRIDE = stringPreferencesKey("base_url_override")
         val CENTRAL_ID = intPreferencesKey("central_id")
@@ -78,5 +101,9 @@ class SettingsManager @Inject constructor(
         val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
         val NOTIFY_INVOICE_ALERTS = booleanPreferencesKey("notify_invoice_alerts")
         val NOTIFY_TICKET_UPDATES = booleanPreferencesKey("notify_ticket_updates")
+        val BRAND_NAME = stringPreferencesKey("brand_name")
+        val BRAND_LOGO_URL = stringPreferencesKey("brand_logo_url")
+        val BRAND_PRIMARY_COLOR = stringPreferencesKey("brand_primary_color")
+        val BRAND_ACCENT_COLOR = stringPreferencesKey("brand_accent_color")
     }
 }

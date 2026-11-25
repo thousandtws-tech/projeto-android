@@ -69,7 +69,10 @@ class BillDetailsViewModelTest {
         boletoPath = boletoPath,
     )
 
-    private fun viewModel(invoiceId: Int? = 42): BillDetailsViewModel {
+    private fun viewModel(
+        invoiceId: Int? = 42,
+        copySendEnabled: Boolean = true,
+    ): BillDetailsViewModel {
         val handle = if (invoiceId == null) {
             SavedStateHandle()
         } else {
@@ -82,6 +85,7 @@ class BillDetailsViewModelTest {
             generatePix,
             sendCopy,
             requestPaymentPromise,
+            copySendEnabled,
         )
     }
 
@@ -270,6 +274,22 @@ class BillDetailsViewModelTest {
         assertNull(state.actionError)
         assertEquals("Cópia enviada por e-mail", state.sentCopyMessage)
         coVerify(exactly = 1) { sendCopy(42, SendChannel.EMAIL, null) }
+    }
+
+    @Test
+    fun `sendCopyByEmail is a no-op when the feature flag is off`() = runTest {
+        stubLoaded(invoice())
+        viewModel = viewModel(42, copySendEnabled = false)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.sendCopyByEmail()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.sendingCopy)
+        assertNull(state.sentCopyMessage)
+        assertNull(state.actionError)
+        coVerify(exactly = 0) { sendCopy(any(), any(), any()) }
     }
 
     @Test

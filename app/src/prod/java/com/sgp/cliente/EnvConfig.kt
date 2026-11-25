@@ -24,4 +24,25 @@ object EnvConfig {
      * blank to hide both.
      */
     const val SUPPORT_WHATSAPP: String = "5571988529584"
+
+    /** CRM backend em produção (Railway) — o app registra o token FCM
+     * via POST /devices e recebe os disparos de /broadcasts. */
+    const val CRM_API_URL: String = "https://crm-api-production-aac589ba.up.railway.app"
+
+    /**
+     * Slug do tenant no CRM multi-tenant — identifica esta build como
+     * "a empresa J D FIBRA" nas rotas públicas (banners, onboarding,
+     * devices). Precisa ser igual ao slug provisionado no painel
+     * super-admin do CRM; slug errado → 404 e os feeds ficam vazios.
+     * Vazio = tenant platform (fallback, comportamento pré-multi-tenant).
+     */
+    const val CRM_TENANT: String = "jd-fibra"
+
+    /**
+     * Envio de 2ª via por e-mail/SMS (`titulo/{id}/{tipo}/send/`). No SGP
+     * da J D FIBRA esse endpoint abre uma ordem de serviço a cada envio —
+     * desligado em produção por regra do provedor. O assinante segue com
+     * a via via "Abrir boleto" (PDF), PIX e linha digitável.
+     */
+    const val SEND_INVOICE_COPY_ENABLED: Boolean = false
 }

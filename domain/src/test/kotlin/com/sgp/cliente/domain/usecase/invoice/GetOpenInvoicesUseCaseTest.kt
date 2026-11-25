@@ -37,6 +37,7 @@ private class FakeSessionRepository(
     override suspend fun selectedContract(): Contract? = null
     override suspend fun authToken(): String? = null
     override suspend fun persistAuthToken(token: String) = Unit
+    override suspend fun updatePassword(newPassword: String) = Unit
     override suspend fun clear() = Unit
 }
 

@@ -1,7 +1,9 @@
 package com.sgp.cliente.core.datastore.di
 
+import com.sgp.cliente.core.datastore.inbox.InboxManager
 import com.sgp.cliente.core.datastore.session.SessionManager
 import com.sgp.cliente.core.datastore.settings.SettingsManager
+import com.sgp.cliente.domain.repository.InboxRepository
 import com.sgp.cliente.domain.repository.SessionRepository
 import com.sgp.cliente.domain.repository.SettingsRepository
 import dagger.Binds
@@ -21,4 +23,8 @@ abstract class DataStoreModule {
     @Binds
     @Singleton
     abstract fun bindSettingsRepository(impl: SettingsManager): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindInboxRepository(impl: InboxManager): InboxRepository
 }

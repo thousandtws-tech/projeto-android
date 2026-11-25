@@ -30,3 +30,6 @@ Thumbs.db
 # Lint / reports
 lint-results*.html
 lint-results*.sarif
+
+# Kotlin daemon crash logs
+.kotlin/

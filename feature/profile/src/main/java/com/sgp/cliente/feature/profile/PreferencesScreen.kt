@@ -33,7 +33,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
-import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonBox
 import com.sgp.cliente.core.designsystem.components.SgpTooltipButton
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
@@ -43,7 +42,6 @@ import com.sgp.cliente.core.designsystem.theme.Spacing
 @Composable
 fun PreferencesScreen(
     onBack: () -> Unit,
-    onConfigureServer: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PreferencesViewModel = hiltViewModel(),
 ) {
@@ -74,7 +72,6 @@ fun PreferencesScreen(
                 onInvoiceAlertsChange = viewModel::setInvoiceAlerts,
                 onTicketUpdatesChange = viewModel::setTicketUpdates,
                 onSave = viewModel::save,
-                onConfigureServer = onConfigureServer,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -87,7 +84,6 @@ internal fun PreferencesContent(
     onInvoiceAlertsChange: (Boolean) -> Unit,
     onTicketUpdatesChange: (Boolean) -> Unit,
     onSave: () -> Unit,
-    onConfigureServer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -135,10 +131,6 @@ internal fun PreferencesContent(
             text = "Salvar preferências",
             onClick = onSave,
             loading = uiState.saving,
-        )
-        SgpSecondaryButton(
-            text = "Servidor do provedor",
-            onClick = onConfigureServer,
         )
     }
 }
@@ -203,7 +195,6 @@ private fun PreferencesContentPreview() {
             onInvoiceAlertsChange = {},
             onTicketUpdatesChange = {},
             onSave = {},
-            onConfigureServer = {},
         )
     }
 }

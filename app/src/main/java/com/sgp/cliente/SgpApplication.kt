@@ -3,6 +3,7 @@ package com.sgp.cliente
 import android.app.Application
 import android.util.Log
 import com.sgp.cliente.core.common.logging.AppLog
+import com.sgp.cliente.core.notifications.NotificationChannels
 import com.sgp.cliente.logging.TimberAppLogger
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -13,6 +14,9 @@ class SgpApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         initLogging()
+        // Canais criados cedo — qualquer push que chegue já encontra a
+        // categoria certa (idempotente, custo ~zero).
+        NotificationChannels.register(this)
         Timber.tag(LIFECYCLE_TAG).i(
             "app start flavor=%s buildType=%s versionName=%s",
             BuildConfig.FLAVOR,

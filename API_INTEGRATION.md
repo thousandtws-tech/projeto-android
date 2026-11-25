@@ -69,10 +69,23 @@ Resposta: `{status, msg, pix: {…}}` — o copia-e-cola vem sob chaves
 variáveis por gateway (`codigo`, `copiaecola`, `emv`, `qrcode`…).
 
 ### `titulo/{id}/{tipo}/send/` — envio da via
-`tipo` = `email`|`sms`. Resposta `{status, msg}`.
+`tipo` = `email`|`sms`. Resposta `{status, msg, protocolo}` — o
+`protocolo` é o da **ocorrência/OS que o SGP abre a cada envio** (OS de
+informação registrando a solicitação de 2ª via). Não existe parâmetro pra
+suprimir essa OS — verificado no bundle oficial da Central, que chama o
+mesmo endpoint sem flags extras. Regra J D FIBRA: o app **não chama** o
+endpoint (flag de build `SEND_INVOICE_COPY_ENABLED`, off em prod); a via
+fica disponível via `link` (PDF), `linha_digitavel` e PIX.
+No SGP, o controle é **server-side**: Administração → Aplicativos →
+Central do Assinante → `Permite enviar 2via por E-mail/SMS`
+(`titulo_2via_email`/`titulo_2via_sms` no `info/` — o app oficial esconde
+os botões quando desligado). `RESPONSAVEL_OS_CENTRAL` (admcore/config)
+define o técnico dono das OS abertas pela Central.
 
 ### `promessapagamento/create/` — promessa de pagamento
 Campos: `contrato`, `observacao`, `termo`. Resposta `{status, protocolo, msg}`.
+Também cria ocorrência server-side — comportamento esperado: tipo, status
+e método são configuráveis por Central (`ocorrencia_promessa_*`).
 
 ### `servico/list` — serviços do contrato
 `[{id, plano, login, situacao, tipo, grupo, up, down}]`.
@@ -95,6 +108,12 @@ Campos: `contrato`, `servico`, `mes`, `ano` → `{extrato: {itens, total}}`.
 
 ## Observações verificadas no demo
 
+- **Sem criação de OS em leitura** — verificado no admin do demo
+  (demo.sgp.net.br, demo/demo): após `titulo/list/`, `titulo/{id}/detail/`
+  e `GET /boleto/{idpublico}/?from_central=1` na conta ROBERTA (contrato
+  2448), a lista de ocorrências do cliente permaneceu inalterada. A OS de
+  informação nasce só no `send/` (e por design em `ocorrencia/create/` e
+  `promessapagamento/create/`).
 - `grupo=vencidos` pode responder **HTML com HTTP 200** em contratos sem
   faturas — o app não usa esse grupo; se usar, tratar como resposta vazia.
   contrato confirmado, comportamento em produção depende do gateway.

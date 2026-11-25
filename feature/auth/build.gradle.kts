@@ -56,8 +56,6 @@ dependencies {
 
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)
-    // ui-test pulls espresso-core transitively; < 3.7.0 eagerly reflects
-    // InputManager.getInstance (removed on Android 16+/API 36+), which makes
-    // every Espresso.onIdle() call throw during compose test idling.
+
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

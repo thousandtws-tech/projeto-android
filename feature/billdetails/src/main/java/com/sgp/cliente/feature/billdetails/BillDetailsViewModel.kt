@@ -17,6 +17,7 @@ import com.sgp.cliente.domain.usecase.payment.GeneratePixUseCase
 import com.sgp.cliente.domain.usecase.payment.RequestPaymentPromiseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import javax.inject.Named
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,7 @@ class BillDetailsViewModel @Inject constructor(
     private val generatePix: GeneratePixUseCase,
     private val sendCopy: SendInvoiceCopyUseCase,
     private val requestPaymentPromise: RequestPaymentPromiseUseCase,
+    @Named("sendInvoiceCopyEnabled") val copySendEnabled: Boolean,
 ) : ViewModel() {
 
     private var invoiceId: Int? = savedStateHandle["invoiceId"]
@@ -150,6 +152,7 @@ class BillDetailsViewModel @Inject constructor(
 
     private fun send(channel: SendChannel) {
         val id = invoiceId ?: return
+        if (!copySendEnabled) return
         viewModelScope.launch {
             _uiState.update { it.copy(sendingCopy = true, actionError = null) }
             sendCopy(id, channel).fold(

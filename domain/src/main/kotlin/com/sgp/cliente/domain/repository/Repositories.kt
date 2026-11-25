@@ -14,6 +14,7 @@ import com.sgp.cliente.domain.model.SecondCopy
 import com.sgp.cliente.domain.model.SendChannel
 import com.sgp.cliente.domain.model.ServiceStatus
 import com.sgp.cliente.domain.model.SessionState
+import com.sgp.cliente.domain.model.TenantBranding
 import kotlinx.coroutines.flow.Flow
 
 /** Owns the persisted session. Implemented in :core:datastore. */
@@ -31,6 +32,10 @@ interface SessionRepository {
     suspend fun authToken(): String?
 
     suspend fun persistAuthToken(token: String)
+
+    /** Re-ciphers and stores the password after a successful password change. */
+    suspend fun updatePassword(newPassword: String)
+
     suspend fun clear()
 }
 
@@ -51,6 +56,17 @@ interface AuthRepository {
      * base-URL propagation.
      */
     suspend fun discoverAndSelectCentral(baseUrl: String): AppResult<CentralOption>
+
+    /**
+     * `POST /api/centralapp/alterarsenha/` — changes the subscriber password
+     * (JSON body verified against the official Central web client). On
+     * success the fresh JWT and the new ciphered password are persisted, so
+     * silent re-logins keep working.
+     */
+    suspend fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+    ): AppResult<Unit>
 }
 
 interface ContractRepository {
@@ -134,8 +150,16 @@ interface SettingsRepository {
     /** Local notification preference: support-ticket updates. */
     val ticketUpdatesEnabled: Flow<Boolean>
 
+    /**
+     * Último branding do tenant lido do `GET /branding` — cache para o
+     * app abrir já vestido antes do refresh de rede. Campos nulos/vazios
+     * voltam à identidade embutida do build.
+     */
+    val branding: Flow<TenantBranding>
+
     suspend fun setBaseUrlOverride(url: String?)
     suspend fun setCentral(id: Int?, token: String?)
     suspend fun setOnboardingSeen()
     suspend fun setNotificationPrefs(invoiceAlerts: Boolean, ticketUpdates: Boolean)
+    suspend fun setBranding(branding: TenantBranding)
 }

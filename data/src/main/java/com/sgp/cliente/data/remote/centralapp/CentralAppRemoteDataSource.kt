@@ -181,6 +181,39 @@ class CentralAppRemoteDataSource @Inject constructor(
     }
 
     /**
+     * `alterarsenha/` — changes the subscriber password. JSON body carries
+     * the central token and contract (the endpoint's custom auth reads them
+     * from the payload, not the headers/form fields).
+     */
+    suspend fun changePassword(
+        customerName: String,
+        currentPassword: String,
+        newPassword: String,
+    ): AppResult<CentralMessageDto> {
+        val centralToken = settingsRepository.centralToken.first()
+            ?: return AppResult.failure(
+                AppError.Validation("Servidor do provedor não configurado"),
+            )
+        suspend fun call() = api.changePassword(
+            CentralChangePasswordRequest(
+                token = centralToken,
+                contract = sessionRepository.selectedContractId() ?: 0,
+                name = customerName,
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+            ),
+        )
+        var result = safeApiCall { call() }
+        if (result is AppResult.Failure &&
+            result.error == AppError.Unauthorized &&
+            reLogin()
+        ) {
+            result = safeApiCall { call() }
+        }
+        return result
+    }
+
+    /**
      * Downloads a pre-signed boleto PDF (`titulo.link`, resolved to an
      * absolute URL). Plain GET — the link carries its own token, so no
      * `contrato` fields and no `callWithAuth` retry are needed.

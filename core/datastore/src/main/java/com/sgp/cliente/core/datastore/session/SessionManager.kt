@@ -109,6 +109,10 @@ class SessionManager @Inject constructor(
         store.edit { prefs -> prefs[Keys.JWT_TOKEN] = token }
     }
 
+    override suspend fun updatePassword(newPassword: String) {
+        store.edit { prefs -> prefs[Keys.PASSWORD_CIPHER] = cipher.encrypt(newPassword) }
+    }
+
     override suspend fun clear() {
         store.edit { it.clear() }
     }

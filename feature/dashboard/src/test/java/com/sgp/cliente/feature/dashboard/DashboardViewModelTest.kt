@@ -2,17 +2,24 @@ package com.sgp.cliente.feature.dashboard
 
 import com.sgp.cliente.core.common.error.AppError
 import com.sgp.cliente.core.common.result.AppResult
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
+import com.sgp.cliente.domain.model.Banner
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.Invoice
+import com.sgp.cliente.domain.model.SendChannel
 import com.sgp.cliente.domain.model.ServiceStatus
 import com.sgp.cliente.domain.model.SessionState
 import com.sgp.cliente.domain.usecase.auth.LogoutUseCase
 import com.sgp.cliente.domain.usecase.auth.ObserveSessionUseCase
+import com.sgp.cliente.domain.usecase.banner.ObserveBannersUseCase
+import com.sgp.cliente.domain.usecase.banner.RefreshBannersUseCase
 import com.sgp.cliente.domain.usecase.contract.CheckServiceStatusUseCase
+import com.sgp.cliente.domain.usecase.invoice.GetBoletoUseCase
 import com.sgp.cliente.domain.usecase.invoice.GetOpenInvoicesUseCase
 import com.sgp.cliente.domain.usecase.invoice.OpenInvoices
+import com.sgp.cliente.domain.usecase.invoice.SendInvoiceCopyUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -43,6 +50,11 @@ class DashboardViewModelTest {
     private val getOpenInvoices: GetOpenInvoicesUseCase = mockk()
     private val checkServiceStatus: CheckServiceStatusUseCase = mockk()
     private val logoutUseCase: LogoutUseCase = mockk(relaxed = true)
+    private val getBoleto: GetBoletoUseCase = mockk()
+    private val sendCopy: SendInvoiceCopyUseCase = mockk()
+    private val observeBanners: ObserveBannersUseCase = mockk()
+    private val refreshBanners: RefreshBannersUseCase = mockk()
+    private val bannerItems = MutableStateFlow<List<Banner>>(emptyList())
     private lateinit var viewModel: DashboardViewModel
 
     private val contract = Contract(
@@ -89,18 +101,23 @@ class DashboardViewModelTest {
         every { observeSession() } returns flowOf(SessionState.LoggedIn(session))
         coEvery { checkServiceStatus() } returns
             AppResult.success(ServiceStatus(1, isOnline = true, message = "Online"))
+        every { observeBanners() } returns bannerItems
+        coEvery { refreshBanners() } returns AppResult.success(Unit)
     }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private fun createViewModel(copySendEnabled: Boolean = false) = DashboardViewModel(
+        observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
+        getBoleto, sendCopy, observeBanners, refreshBanners, copySendEnabled,
+    )
+
     @Test
     fun `state starts loading before the first load completes`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
 
         assertTrue(viewModel.uiState.value.loading)
     }
@@ -109,9 +126,7 @@ class DashboardViewModelTest {
     fun `successful load exposes the open invoices and clears loading`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -127,9 +142,7 @@ class DashboardViewModelTest {
     fun `logged-in session is exposed together with its selected contract`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(session, viewModel.uiState.value.session)
@@ -141,9 +154,7 @@ class DashboardViewModelTest {
         every { observeSession() } returns flowOf(SessionState.LoggedOut)
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.session)
@@ -155,9 +166,7 @@ class DashboardViewModelTest {
         coEvery { getOpenInvoices(any()) } returns
             AppResult.failure(AppError.NetworkUnavailable)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -170,9 +179,7 @@ class DashboardViewModelTest {
     fun `the initial load uses the cached path`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         coVerify(exactly = 1) { getOpenInvoices(false) }
@@ -184,9 +191,7 @@ class DashboardViewModelTest {
         val gate = CompletableDeferred<AppResult<OpenInvoices>>()
         coEvery { getOpenInvoices(false) } returns AppResult.success(open)
         coEvery { getOpenInvoices(true) } coAnswers { gate.await() }
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.refresh()
@@ -205,9 +210,7 @@ class DashboardViewModelTest {
     fun `failed refresh keeps the loaded invoices and surfaces the error`() = runTest {
         coEvery { getOpenInvoices(false) } returns AppResult.success(open)
         coEvery { getOpenInvoices(true) } returns AppResult.failure(AppError.Server)
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.refresh()
@@ -223,9 +226,7 @@ class DashboardViewModelTest {
     fun `service status is exposed for the connectivity pill`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(true, viewModel.uiState.value.serviceStatus?.isOnline)
@@ -236,9 +237,7 @@ class DashboardViewModelTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
         coEvery { checkServiceStatus() } returns AppResult.failure(AppError.Server)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.serviceStatus)
@@ -251,9 +250,7 @@ class DashboardViewModelTest {
         val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session))
         every { observeSession() } returns sessionFlow
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
         coVerify(exactly = 1) { getOpenInvoices(false) }
         coVerify(exactly = 1) { checkServiceStatus() }
@@ -273,9 +270,7 @@ class DashboardViewModelTest {
         val sessionFlow = MutableStateFlow<SessionState>(SessionState.LoggedIn(session))
         every { observeSession() } returns sessionFlow
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         sessionFlow.value = SessionState.LoggedIn(session)
@@ -287,9 +282,7 @@ class DashboardViewModelTest {
     @Test
     fun `logout delegates to the use case`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         viewModel.logout()
@@ -302,11 +295,171 @@ class DashboardViewModelTest {
     fun `current invoice picks the first overdue over upcoming`() = runTest {
         coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
 
-        viewModel = DashboardViewModel(
-            observeSession, getOpenInvoices, checkServiceStatus, logoutUseCase,
-        )
+        viewModel = createViewModel()
         dispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(1, viewModel.uiState.value.currentInvoice?.id)
+    }
+
+    // -- Segunda via (modal do card) ------------------------------------------
+
+    @Test
+    fun `segunda via sheet opens and closes without touching the api`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openSegundaVia()
+        assertTrue(viewModel.uiState.value.segundaViaOpen)
+
+        viewModel.closeSegundaVia()
+        assertFalse(viewModel.uiState.value.segundaViaOpen)
+        coVerify(exactly = 0) { getBoleto(any()) }
+    }
+
+    @Test
+    fun `openBoleto does nothing when the current invoice has no boleto path`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openSegundaVia()
+        viewModel.openBoleto()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.boletoOpen)
+        coVerify(exactly = 0) { getBoleto(any()) }
+    }
+
+    @Test
+    fun `openBoleto success exposes the pdf and opens the viewer`() = runTest {
+        val withBoleto = OpenInvoices(
+            overdue = listOf(invoice(1).copy(boletoPath = "/boleto/abc")),
+            upcoming = emptyList(),
+        )
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(withBoleto)
+        coEvery { getBoleto(any()) } returns
+            AppResult.success(BoletoContent.Pdf(byteArrayOf(1, 2, 3)))
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openBoleto()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.boletoOpen)
+        assertFalse(state.boletoLoading)
+        assertTrue(state.boleto is BoletoContent.Pdf)
+        assertNull(state.boletoError)
+    }
+
+    @Test
+    fun `openBoleto failure surfaces the error for retry`() = runTest {
+        val withBoleto = OpenInvoices(
+            overdue = listOf(invoice(1).copy(boletoPath = "/boleto/abc")),
+            upcoming = emptyList(),
+        )
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(withBoleto)
+        coEvery { getBoleto(any()) } returns AppResult.failure(AppError.Timeout)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openBoleto()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.boletoOpen)
+        assertFalse(state.boletoLoading)
+        assertEquals(AppError.Timeout, state.boletoError)
+
+        viewModel.closeBoleto()
+        assertFalse(viewModel.uiState.value.boletoOpen)
+        assertNull(viewModel.uiState.value.boletoError)
+    }
+
+    @Test
+    fun `sendCopyByEmail is a no-op when the feature flag is off`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel(copySendEnabled = false)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.sendCopyByEmail()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 0) { sendCopy(any(), any(), any()) }
+        assertNull(viewModel.uiState.value.sentCopyMessage)
+        assertNull(viewModel.uiState.value.actionError)
+    }
+
+    @Test
+    fun `sendCopyByEmail delivers the copy and surfaces the api message`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        coEvery { sendCopy(any(), any(), any()) } returns
+            AppResult.success("2ª via enviada para o e-mail cadastrado")
+        viewModel = createViewModel(copySendEnabled = true)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.sendCopyByEmail()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { sendCopy(1, SendChannel.EMAIL, null) }
+        assertEquals(
+            "2ª via enviada para o e-mail cadastrado",
+            viewModel.uiState.value.sentCopyMessage,
+        )
+    }
+
+    // -- Banners (carrossel CMS) ------------------------------------------------
+
+    @Test
+    fun `banners do CMS são expostos no estado`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        bannerItems.value = listOf(
+            Banner("b1", "Mais velocidade", "https://x/img1.jpg"),
+            Banner("b2", "Indique e ganhe", "https://x/img2.jpg", "https://x/link"),
+        )
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(
+            listOf("b1", "b2"),
+            viewModel.uiState.value.banners.map { it.id },
+        )
+    }
+
+    @Test
+    fun `feed vazio esconde o carrossel sem sujar o erro da dashboard`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.banners.isEmpty())
+        assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `nova emissão do feed atualiza o estado — sinal cms_refresh`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.banners.isEmpty())
+
+        // O push silencioso fez refresh no repository → flow emite de novo.
+        bannerItems.value = listOf(Banner("b1", "Novo banner", "https://x/img.jpg"))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf("b1"), viewModel.uiState.value.banners.map { it.id })
+    }
+
+    @Test
+    fun `refresh recarrega os banners junto`() = runTest {
+        coEvery { getOpenInvoices(any()) } returns AppResult.success(open)
+        viewModel = createViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.refresh()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 2) { refreshBanners() }
     }
 }

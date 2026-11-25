@@ -1,0 +1,66 @@
+package(default_visibility = ["//visibility:public"])
+
+# Delegate targets: Bazel decides WHEN to rebuild (hashing the declared source
+# tree); Gradle does the actual Android build — a multi-module AGP build
+# (Compose, Hilt/KSP, flavors, FCM) that is not ported to rules_android.
+#
+# Non-hermetic by design: needs the local Android SDK (local.properties),
+# JDK 21 (gradle/gradle-daemon-jvm.properties pins the daemon) and network for
+# Maven deps. `manual` keeps `bazel build //...` fast — invoke these targets
+# explicitly. Tests remain Gradle-side (`pnpm android:test`).
+
+# Everything the Gradle build may read, minus build outputs/caches.
+_SRCS = glob(
+    ["**/*"],
+    exclude = [
+        "BUILD.bazel",
+        "build/**",
+        "**/build/**",
+        ".gradle/**",
+        ".git/**",
+        ".idea/**",
+        ".kotlin/**",
+        ".vscode/**",
+        "node_modules/**",
+        "*.log",
+    ],
+    allow_empty = True,
+)
+
+# `bazel build //apps/projeto-android:apk_dev_debug`
+genrule(
+    name = "apk_dev_debug",
+    srcs = _SRCS,
+    outs = ["sgp-cliente-dev-debug.apk"],
+    # BAZEL_SH (Git Bash) is pinned repo-wide in /.bazelrc. $@ is execroot-
+    # relative, so resolve it before cd.
+    cmd = "\n".join([
+        "out=\"$$PWD/$@\"",
+        "cd apps/projeto-android",
+        "./gradlew --console=plain :app:assembleDevDebug",
+        "cp app/build/outputs/apk/dev/debug/*.apk \"$$out\"",
+    ]),
+    local = True,
+    tags = [
+        "manual",
+        "no-sandbox",
+    ],
+)
+
+# `bazel build //apps/projeto-android:apk_dev_release`
+genrule(
+    name = "apk_dev_release",
+    srcs = _SRCS,
+    outs = ["sgp-cliente-dev-release.apk"],
+    cmd = "\n".join([
+        "out=\"$$PWD/$@\"",
+        "cd apps/projeto-android",
+        "./gradlew --console=plain :app:assembleDevRelease",
+        "cp app/build/outputs/apk/dev/release/*.apk \"$$out\"",
+    ]),
+    local = True,
+    tags = [
+        "manual",
+        "no-sandbox",
+    ],
+)

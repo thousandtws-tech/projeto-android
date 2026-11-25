@@ -3,7 +3,6 @@ package com.sgp.cliente.feature.auth
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -61,7 +59,7 @@ import androidx.core.view.ViewCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sgp.cliente.core.common.error.AppError
-import com.sgp.cliente.core.designsystem.R
+import com.sgp.cliente.core.designsystem.components.BrandLogo
 import com.sgp.cliente.core.designsystem.components.SgpPasswordField
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpTextField
@@ -91,7 +89,6 @@ private val SheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
 
 @Composable
 fun LoginScreen(
-    onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier,
     supportWhatsApp: String = "",
     viewModel: LoginViewModel = hiltViewModel(),
@@ -103,7 +100,6 @@ fun LoginScreen(
         onLoginChange = viewModel::onLoginChange,
         onPasswordChange = viewModel::onPasswordChange,
         onSubmit = viewModel::submit,
-        onOpenPrivacy = onOpenPrivacy,
         supportWhatsApp = supportWhatsApp,
         modifier = modifier,
     )
@@ -115,7 +111,6 @@ internal fun LoginContent(
     onLoginChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onOpenPrivacy: () -> Unit,
     supportWhatsApp: String,
     modifier: Modifier = Modifier,
 ) {
@@ -223,16 +218,6 @@ internal fun LoginContent(
                                 },
                             )
                         }
-
-                        TextButton(
-                            onClick = onOpenPrivacy,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        ) {
-                            Text(
-                                text = "Política de Privacidade",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
                     }
                 }
             }
@@ -248,9 +233,8 @@ private fun BrandHero(modifier: Modifier = Modifier) {
     Box(modifier = modifier.statusBarsPadding(), contentAlignment = Alignment.Center) {
         HeroDecorations()
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(R.drawable.jdfibra_lockup),
-                contentDescription = "J D FIBRA",
+            BrandLogo(
+                contentDescription = "Logo do provedor",
                 modifier = Modifier.height(120.dp),
             )
             Text(
@@ -539,7 +523,6 @@ private fun LoginContentEmptyPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onOpenPrivacy = {},
             supportWhatsApp = "",
         )
     }
@@ -554,7 +537,6 @@ private fun LoginContentSupportPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onOpenPrivacy = {},
             supportWhatsApp = "5573999999999",
         )
     }
@@ -573,7 +555,6 @@ private fun LoginContentErrorPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onOpenPrivacy = {},
             supportWhatsApp = "5573999999999",
         )
     }
@@ -592,7 +573,6 @@ private fun LoginContentLoadingPreview() {
             onLoginChange = {},
             onPasswordChange = {},
             onSubmit = {},
-            onOpenPrivacy = {},
             supportWhatsApp = "",
         )
     }

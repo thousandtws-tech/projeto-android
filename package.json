@@ -1,0 +1,15 @@
+{
+  "name": "sgp-cliente",
+  "version": "0.0.0",
+  "private": true,
+  "description": "App Android (Gradle/Kotlin) — registrado no workspace pnpm para comandos unificados. Builds e testes rodam via gradlew (../../tools/gradle_wrapper.mjs); nao e um pacote Node.",
+  "scripts": {
+    "android:gradle": "node ../../tools/gradle_wrapper.mjs",
+    "android:apk": "node ../../tools/gradle_wrapper.mjs :app:assembleDevDebug",
+    "android:release": "node ../../tools/gradle_wrapper.mjs :app:assembleDevRelease",
+    "android:test": "node ../../tools/gradle_wrapper.mjs :core:common:test :domain:test :data:testDebugUnitTest :feature:auth:testDebugUnitTest :feature:bills:testDebugUnitTest :feature:billdetails:testDebugUnitTest :feature:contracts:testDebugUnitTest :feature:dashboard:testDebugUnitTest :feature:onboarding:testDebugUnitTest :feature:paymentpromises:testDebugUnitTest :feature:profile:testDebugUnitTest",
+    "android:lint": "node ../../tools/gradle_wrapper.mjs ktlintCheck detekt",
+    "android:coverage": "node ../../tools/gradle_wrapper.mjs koverXmlReport koverHtmlReport",
+    "android:clean": "node ../../tools/gradle_wrapper.mjs clean"
+  }
+}

@@ -9,70 +9,91 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
-import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Intent
+import android.net.Uri
+import coil3.compose.AsyncImage
 import com.sgp.cliente.core.common.format.DateFormatter
 import com.sgp.cliente.core.common.format.MoneyFormatter
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
 import com.sgp.cliente.core.designsystem.adaptive.currentWindowWidthSizeClass
+import com.sgp.cliente.core.designsystem.components.BoletoViewerDialog
 import com.sgp.cliente.core.designsystem.components.SgpBadgeKind
+import com.sgp.cliente.core.designsystem.components.SgpCopyableValue
 import com.sgp.cliente.core.designsystem.components.SgpEmptyState
 import com.sgp.cliente.core.designsystem.components.SgpErrorView
 import com.sgp.cliente.core.designsystem.components.SgpPrimaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSecondaryButton
 import com.sgp.cliente.core.designsystem.components.SgpSkeletonDashboard
 import com.sgp.cliente.core.designsystem.components.SgpStatusBadge
+import com.sgp.cliente.core.designsystem.components.TopOnlyOverscrollEffect
+import com.sgp.cliente.core.designsystem.components.toUserMessage
 import com.sgp.cliente.core.designsystem.theme.BrandDeep
 import com.sgp.cliente.core.designsystem.theme.LayoutTokens
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
 import com.sgp.cliente.core.designsystem.theme.Spacing
 import com.sgp.cliente.core.designsystem.theme.StatusPaid
 import com.sgp.cliente.core.designsystem.theme.StatusPaidContainer
+import com.sgp.cliente.domain.model.BoletoContent
 import com.sgp.cliente.domain.model.Contract
 import com.sgp.cliente.domain.model.Credentials
+import com.sgp.cliente.domain.model.Banner
 import com.sgp.cliente.domain.model.CustomerSession
 import com.sgp.cliente.domain.model.Invoice
 import com.sgp.cliente.domain.model.InvoiceStatus
@@ -92,33 +113,87 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    Scaffold(modifier = modifier) { padding ->
-        PullToRefreshBox(
-            // Hide the spinner while the skeleton is showing — they
-            // represent the same load, showing both is visual noise.
-            isRefreshing = uiState.refreshing && !uiState.loading,
-            onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize().padding(padding),
-        ) {
-            SgpContentFrame(modifier = Modifier.fillMaxSize()) {
-                when {
-                    uiState.loading -> SgpSkeletonDashboard(Modifier.fillMaxSize())
-                    uiState.error != null && uiState.all.isEmpty() ->
-                        SgpErrorView(uiState.error!!, viewModel::refresh, Modifier.fillMaxSize())
-                    else -> DashboardContent(
-                        uiState = uiState,
-                        onOpenInvoice = onOpenInvoice,
-                        onOpenBills = onOpenBills,
-                        onOpenPromise = onOpenPromise,
-                        onOpenContracts = onOpenContracts,
-                        onOpenProfile = onOpenProfile,
-                        onLogout = viewModel::logout,
-                    )
-                }
+    PullToRefreshBox(
+        // Hide the spinner while the skeleton is showing — they
+        // represent the same load, showing both is visual noise.
+        isRefreshing = uiState.refreshing && !uiState.loading,
+        onRefresh = viewModel::refresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        SgpContentFrame(modifier = Modifier.fillMaxSize()) {
+            when {
+                uiState.loading -> SgpSkeletonDashboard(Modifier.fillMaxSize())
+                uiState.error != null && uiState.all.isEmpty() ->
+                    SgpErrorView(uiState.error!!, viewModel::refresh, Modifier.fillMaxSize())
+                else -> DashboardContent(
+                    uiState = uiState,
+                    onOpenInvoice = onOpenInvoice,
+                    onOpenBills = onOpenBills,
+                    onOpenPromise = onOpenPromise,
+                    onOpenContracts = onOpenContracts,
+                    onOpenProfile = onOpenProfile,
+                    onOpenSegundaVia = viewModel::openSegundaVia,
+                    onBannerClick = { url ->
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                    },
+                    onLogout = viewModel::logout,
+                )
             }
         }
     }
+
+    if (uiState.segundaViaOpen) {
+        SegundaViaSheet(
+            uiState = uiState,
+            copySendEnabled = viewModel.copySendEnabled,
+            onDismiss = viewModel::closeSegundaVia,
+            onOpenBoleto = viewModel::openBoleto,
+            onSendEmail = viewModel::sendCopyByEmail,
+            onOpenInvoice = { id ->
+                viewModel.closeSegundaVia()
+                onOpenInvoice(id)
+            },
+            onOpenBills = {
+                viewModel.closeSegundaVia()
+                onOpenBills()
+            },
+        )
+    }
+
+    if (uiState.boletoOpen) {
+        BoletoViewerDialog(
+            title = uiState.currentInvoice?.documentNumber
+                ?.let { "Boleto · Nº $it" } ?: "Boleto",
+            fileKey = uiState.currentInvoice?.id?.toString() ?: "boleto",
+            pdf = (uiState.boleto as? BoletoContent.Pdf)?.bytes,
+            webUrl = (uiState.boleto as? BoletoContent.ExternalPage)?.url,
+            loading = uiState.boletoLoading,
+            error = uiState.boletoError,
+            onRetry = viewModel::openBoleto,
+            onDismiss = viewModel::closeBoleto,
+        )
+    }
+
+    uiState.sentCopyMessage?.let { message ->
+        InfoDialog("Segunda via", message, viewModel::consumeSentCopyMessage)
+    }
+    uiState.actionError?.let { error ->
+        InfoDialog("Segunda via", error.toUserMessage(), viewModel::consumeActionError)
+    }
+}
+
+@Composable
+private fun InfoDialog(title: String, text: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
+        title = { Text(title) },
+        text = { Text(text) },
+    )
 }
 
 @Composable
@@ -129,18 +204,28 @@ private fun DashboardContent(
     onOpenPromise: () -> Unit,
     onOpenContracts: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSegundaVia: () -> Unit,
+    onBannerClick: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
     val today = LocalDate.now()
+    // Overscroll só no topo: o efeito da base cobria o fim da lista
+    // durante o scroll, escondendo itens atrás da barra flutuante.
+    val platformOverscroll = rememberOverscrollEffect()
+    val topOnlyOverscroll = remember(platformOverscroll) {
+        platformOverscroll?.let { TopOnlyOverscrollEffect(it) }
+    }
     if (currentWindowWidthSizeClass() == WindowWidthSizeClass.Compact) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            overscrollEffect = topOnlyOverscroll,
         ) {
             dashboardItems(
                 uiState, today, onOpenInvoice, onOpenBills, onOpenPromise,
-                onOpenContracts, onOpenProfile, onLogout,
+                onOpenContracts, onOpenProfile, onOpenSegundaVia,
+                onBannerClick, onLogout,
             )
         }
     } else {
@@ -150,10 +235,12 @@ private fun DashboardContent(
             contentPadding = PaddingValues(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            overscrollEffect = topOnlyOverscroll,
         ) {
             dashboardItems(
                 uiState, today, onOpenInvoice, onOpenBills, onOpenPromise,
-                onOpenContracts, onOpenProfile, onLogout,
+                onOpenContracts, onOpenProfile, onOpenSegundaVia,
+                onBannerClick, onLogout,
             )
         }
     }
@@ -167,6 +254,8 @@ private fun LazyListScope.dashboardItems(
     onOpenPromise: () -> Unit,
     onOpenContracts: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSegundaVia: () -> Unit,
+    onBannerClick: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
     item {
@@ -174,7 +263,19 @@ private fun LazyListScope.dashboardItems(
     }
 
     item {
-        QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
+        QuickActionsRow(
+            uiState,
+            onOpenInvoice,
+            onOpenBills,
+            onOpenProfile,
+            onOpenSegundaVia,
+        )
+    }
+
+    if (uiState.banners.isNotEmpty()) {
+        item {
+            BannersSection(uiState.banners, onBannerClick)
+        }
     }
 
     item { InvoicesHeader(onOpenBills) }
@@ -212,6 +313,8 @@ private fun LazyGridScope.dashboardItems(
     onOpenPromise: () -> Unit,
     onOpenContracts: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSegundaVia: () -> Unit,
+    onBannerClick: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
     // Non-card elements stretch across all columns; invoice cards fill cells.
@@ -220,7 +323,19 @@ private fun LazyGridScope.dashboardItems(
     }
 
     item(span = { GridItemSpan(maxLineSpan) }) {
-        QuickActionsRow(uiState, onOpenInvoice, onOpenBills, onOpenProfile)
+        QuickActionsRow(
+            uiState,
+            onOpenInvoice,
+            onOpenBills,
+            onOpenProfile,
+            onOpenSegundaVia,
+        )
+    }
+
+    if (uiState.banners.isNotEmpty()) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            BannersSection(uiState.banners, onBannerClick)
+        }
     }
 
     item(span = { GridItemSpan(maxLineSpan) }) { InvoicesHeader(onOpenBills) }
@@ -407,6 +522,7 @@ private fun QuickActionsRow(
     onOpenInvoice: (Int) -> Unit,
     onOpenBills: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSegundaVia: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
         Text(
@@ -428,7 +544,7 @@ private fun QuickActionsRow(
             QuickActionCard(
                 icon = Icons.AutoMirrored.Filled.ReceiptLong,
                 label = "Segunda via",
-                onClick = onOpenBills,
+                onClick = onOpenSegundaVia,
                 modifier = Modifier.weight(1f),
             )
             QuickActionCard(
@@ -478,6 +594,194 @@ private fun QuickActionCard(
     }
 }
 
+/**
+ * "Novidades" — carrossel M3 multi-browse com os banners de marketing
+ * publicados no CMS do provedor. Card com `actionUrl` abre o link no
+ * navegador; sem link, é apenas visual.
+ */
+@Composable
+private fun BannersSection(
+    banners: List<Banner>,
+    onBannerClick: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
+        Text(
+            text = "Novidades",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        BannersCarousel(
+            banners = banners,
+            onBannerClick = onBannerClick,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
+    }
+}
+
+@Composable
+private fun BannersCarousel(
+    banners: List<Banner>,
+    onBannerClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pagerState = rememberPagerState { banners.size }
+    Box(modifier = modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+        HorizontalPager(
+            state = pagerState,
+            pageSpacing = Spacing.sm,
+            modifier = Modifier.fillMaxSize(),
+        ) { index ->
+            BannerCard(
+                banner = banners[index],
+                onClick = {
+                    banners[index].actionUrl
+                        ?.takeIf(String::isNotBlank)
+                        ?.let(onBannerClick)
+                },
+            )
+        }
+        if (banners.size > 1) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp),
+            ) {
+                repeat(banners.size) { page ->
+                    val selected = pagerState.currentPage == page
+                    Box(
+                        modifier = Modifier
+                            .width(if (selected) 18.dp else 8.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (selected) Color.White else Color.White.copy(alpha = 0.45f),
+                            ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Card-herói de marketing 16:9: a arte preenche o card inteiro sem
+ * cortar topo/rodapé; `actionUrl` ganha o affordance de link. */
+@Composable
+private fun BannerCard(
+    banner: Banner,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxSize(),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = banner.imageUrl,
+                contentDescription = banner.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (banner.actionUrl != null) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Spacing.md)
+                        .size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "Segunda via" — entrega a via da fatura em aberto mais urgente sem sair
+ * da dashboard: boleto em PDF, linha digitável e PIX copia-e-cola.
+ * O envio por e-mail aparece só nos flavors que permitem (`send/` abre
+ * ordem de serviço no SGP — ver `SEND_INVOICE_COPY_ENABLED`).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SegundaViaSheet(
+    uiState: DashboardUiState,
+    copySendEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onOpenBoleto: () -> Unit,
+    onSendEmail: () -> Unit,
+    onOpenInvoice: (Int) -> Unit,
+    onOpenBills: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.md)
+                .padding(bottom = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text(
+                text = "Segunda via",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            val invoice = uiState.currentInvoice
+            if (invoice == null) {
+                Text(
+                    text = "Nenhuma fatura em aberto no momento.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SgpSecondaryButton(text = "Ver faturas", onClick = onOpenBills)
+            } else {
+                Text(
+                    text = "Fatura Nº ${invoice.documentNumber ?: invoice.id}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = "${MoneyFormatter.brl(invoice.displayAmount)} · " +
+                        DateFormatter.dueWithRelative(
+                            invoice.effectiveOrOriginalDueDate,
+                            LocalDate.now(),
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (invoice.boletoPath != null) {
+                    SgpPrimaryButton(
+                        text = "Abrir boleto",
+                        onClick = onOpenBoleto,
+                        loading = uiState.boletoLoading && uiState.boletoOpen,
+                    )
+                }
+                invoice.barcode?.let {
+                    SgpCopyableValue(label = "Linha digitável", value = it)
+                }
+                invoice.pixCode?.let {
+                    SgpCopyableValue(label = "PIX copia e cola", value = it)
+                }
+                if (copySendEnabled) {
+                    SgpSecondaryButton(
+                        text = "Receber por e-mail",
+                        onClick = onSendEmail,
+                        enabled = !uiState.sendingCopy,
+                    )
+                }
+                TextButton(onClick = { onOpenInvoice(invoice.id) }) {
+                    Text("Ver detalhes da fatura")
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun InvoicesHeader(onOpenBills: () -> Unit) {
     Row(
@@ -495,10 +799,6 @@ private fun InvoicesHeader(onOpenBills: () -> Unit) {
     }
 }
 
-/** M3 uncontained carousel: a full-color hero card for the current invoice
- * followed by compact tonal cards — the peeked edge is the affordance,
- * matching the reference's swipable invoice cards. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InvoicesCarousel(
     current: Invoice,
@@ -507,28 +807,34 @@ private fun InvoicesCarousel(
     onOpenInvoice: (Int) -> Unit,
 ) {
     val itemCount = next.size + 1
-    val state = rememberCarouselState { itemCount }
-    HorizontalUncontainedCarousel(
-        state = state,
-        itemWidth = 300.dp,
-        itemSpacing = Spacing.sm,
-        modifier = Modifier.fillMaxWidth(),
-    ) { index ->
-        if (index == 0) {
-            CurrentInvoiceHeroCard(
-                invoice = current,
-                today = today,
-                onClick = { onOpenInvoice(current.id) },
-                modifier = Modifier.maskClip(RoundedCornerShape(24.dp)),
-            )
-        } else {
-            val invoice = next[index - 1]
-            NextInvoiceCard(
-                invoice = invoice,
-                today = today,
-                onClick = { onOpenInvoice(invoice.id) },
-                modifier = Modifier.maskClip(RoundedCornerShape(24.dp)),
-            )
+    if (itemCount == 1) {
+        CurrentInvoiceHeroCard(
+            invoice = current,
+            today = today,
+            onClick = { onOpenInvoice(current.id) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    } else {
+        val pagerState = rememberPagerState { itemCount }
+        HorizontalPager(
+            state = pagerState,
+            pageSpacing = Spacing.sm,
+            modifier = Modifier.fillMaxWidth(),
+        ) { index ->
+            if (index == 0) {
+                CurrentInvoiceHeroCard(
+                    invoice = current,
+                    today = today,
+                    onClick = { onOpenInvoice(current.id) },
+                )
+            } else {
+                val invoice = next[index - 1]
+                NextInvoiceCard(
+                    invoice = invoice,
+                    today = today,
+                    onClick = { onOpenInvoice(invoice.id) },
+                )
+            }
         }
     }
 }
@@ -743,6 +1049,19 @@ private val previewUiState = DashboardUiState(
         ),
     ),
     serviceStatus = ServiceStatus(statusCode = 1, isOnline = true, message = "Online"),
+    banners = listOf(
+        Banner(
+            id = "b1",
+            title = "Planos com mais velocidade na sua região",
+            imageUrl = "https://example.com/banner-speed.jpg",
+            actionUrl = "https://jdfibra.example.com/planos",
+        ),
+        Banner(
+            id = "b2",
+            title = "Indique e ganhe: 1 mês grátis por indicação",
+            imageUrl = "https://example.com/banner-referral.jpg",
+        ),
+    ),
 )
 
 @Preview(showBackground = true, widthDp = 412, heightDp = 915)
@@ -756,6 +1075,8 @@ private fun DashboardContentCompactPreview() {
             onOpenPromise = {},
             onOpenContracts = {},
             onOpenProfile = {},
+            onOpenSegundaVia = {},
+            onBannerClick = {},
             onLogout = {},
         )
     }
@@ -772,6 +1093,8 @@ private fun DashboardContentGridPreview() {
             onOpenPromise = {},
             onOpenContracts = {},
             onOpenProfile = {},
+            onOpenSegundaVia = {},
+            onBannerClick = {},
             onLogout = {},
         )
     }

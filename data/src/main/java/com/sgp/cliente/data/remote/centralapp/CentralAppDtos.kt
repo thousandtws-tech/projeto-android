@@ -175,6 +175,21 @@ data class CentralMessageDto(
     @SerialName("status") val status: Int? = null,
     @SerialName("msg") val message: String? = null,
     @SerialName("protocolo") val protocol: String? = null,
+    /** `alterarsenha/` answers a fresh JWT on success. */
+    @SerialName("jwt_token") val jwtToken: String? = null,
+)
+
+// ----- POST /api/centralapp/alterarsenha/ (JSON body — verified against the
+// official Central web client, which posts {token, contrato, nome,
+// currentPassword, newPassword}) ---------------------------------------------
+
+@Serializable
+data class CentralChangePasswordRequest(
+    @SerialName("token") val token: String,
+    @SerialName("contrato") val contract: Int,
+    @SerialName("nome") val name: String,
+    @SerialName("currentPassword") val currentPassword: String,
+    @SerialName("newPassword") val newPassword: String,
 )
 
 // ----- POST /api/centralapp/servico/list -------------------------------------

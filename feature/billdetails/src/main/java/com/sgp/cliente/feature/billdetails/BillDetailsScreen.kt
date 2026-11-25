@@ -183,34 +183,43 @@ private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsVi
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                invoice.paidAt?.let {
+                    Text(
+                        text = "Paga em ${DateFormatter.display(it)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 
-        invoice.pixCode?.let { pix ->
-            SgpCard {
-                SgpCopyableValue(
-                    label = "PIX copia e cola",
-                    value = pix,
-                    modifier = Modifier.fillMaxWidth(),
+        if (isOpen) {
+            invoice.pixCode?.let { pix ->
+                SgpCard {
+                    SgpCopyableValue(
+                        label = "PIX copia e cola",
+                        value = pix,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            if (invoice.pixCode == null && invoice.canGeneratePix) {
+                SgpPrimaryButton(
+                    text = "Gerar código PIX",
+                    onClick = viewModel::generatePix,
+                    loading = uiState.generatingPix,
                 )
             }
-        }
 
-        if (isOpen && invoice.pixCode == null && invoice.canGeneratePix) {
-            SgpPrimaryButton(
-                text = "Gerar código PIX",
-                onClick = viewModel::generatePix,
-                loading = uiState.generatingPix,
-            )
-        }
-
-        invoice.barcode?.let { barcode ->
-            SgpCard {
-                SgpCopyableValue(
-                    label = "Linha digitável",
-                    value = barcode,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            invoice.barcode?.let { barcode ->
+                SgpCard {
+                    SgpCopyableValue(
+                        label = "Linha digitável",
+                        value = barcode,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
@@ -223,11 +232,15 @@ private fun DetailsContent(uiState: BillDetailsUiState, viewModel: BillDetailsVi
         }
 
         if (isOpen) {
-            SgpSecondaryButton(
-                text = "Receber 2ª via por e-mail",
-                onClick = viewModel::sendCopyByEmail,
-                enabled = !uiState.sendingCopy,
-            )
+            // Regra J D FIBRA: o envio de 2ª via gera ordem de serviço no
+            // SGP — o botão só existe nos flavors que permitem o envio.
+            if (viewModel.copySendEnabled) {
+                SgpSecondaryButton(
+                    text = "Receber 2ª via por e-mail",
+                    onClick = viewModel::sendCopyByEmail,
+                    enabled = !uiState.sendingCopy,
+                )
+            }
             SgpPrimaryButton(
                 text = "Solicitar promessa de pagamento",
                 onClick = viewModel::requestPromise,

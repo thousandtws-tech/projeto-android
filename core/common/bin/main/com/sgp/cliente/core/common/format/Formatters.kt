@@ -1,7 +1,10 @@
 package com.sgp.cliente.core.common.format
 
 import java.text.NumberFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
@@ -78,5 +81,22 @@ object DateFormatter {
         }
         val verb = if (days < 0) "Venceu em" else "Vence em"
         return "$verb ${display(due)} · $rel"
+    }
+
+    /**
+     * Idade amigável de um instante ("agora", "há 12 min", "há 3 h",
+     * "ontem", "dd/MM") — usada no sino e nos cards de avisos.
+     */
+    fun relative(epochMillis: Long, now: LocalDateTime = LocalDateTime.now()): String {
+        val then = Instant.ofEpochMilli(epochMillis)
+            .atZone(ZoneId.systemDefault()).toLocalDateTime()
+        val minutes = ChronoUnit.MINUTES.between(then, now)
+        if (minutes < 1) return "agora"
+        if (minutes < 60) return "há $minutes min"
+        val hours = ChronoUnit.HOURS.between(then, now)
+        if (hours < 24) return "há $hours h"
+        val days = ChronoUnit.DAYS.between(then.toLocalDate(), now.toLocalDate())
+        if (days == 1L) return "ontem"
+        return then.format(DateTimeFormatter.ofPattern("dd/MM"))
     }
 }

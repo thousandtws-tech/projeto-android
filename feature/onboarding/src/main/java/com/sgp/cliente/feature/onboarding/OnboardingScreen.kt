@@ -23,31 +23,52 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import coil3.compose.AsyncImage
 import com.sgp.cliente.core.designsystem.adaptive.SgpContentFrame
 import com.sgp.cliente.core.designsystem.components.SgpTextButton
 import com.sgp.cliente.core.designsystem.theme.SgpTheme
+import com.sgp.cliente.domain.model.OnboardingSlide
 import kotlinx.coroutines.launch
 
-private data class OnboardingPage(
-    @param:DrawableRes val illustration: Int,
+internal data class OnboardingPage(
+    /** Ilustração embutida (`R.drawable`) ou mídia do CMS — só uma vale
+     * por vez; [videoUrl] tem precedência sobre a imagem. */
+    @param:DrawableRes val illustration: Int? = null,
+    val imageUrl: String? = null,
+    val videoUrl: String? = null,
     val illustrationDescription: String,
     val title: String,
     val body: String,
 )
 
-private val pages = listOf(
+internal val defaultPages = listOf(
     OnboardingPage(
         illustration = R.drawable.onboarding_connection,
         illustrationDescription = "Ilustração de uma órbita azul conectada",
@@ -88,12 +109,29 @@ fun OnboardingScreen(
     onFinish: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
+    val slides by viewModel.slides.collectAsStateWithLifecycle()
+    val pages = remember(slides) {
+        if (slides.isEmpty()) {
+            defaultPages
+        } else {
+            slides.sortedBy(OnboardingSlide::position).map { slide ->
+                OnboardingPage(
+                    imageUrl = slide.imageUrl,
+                    videoUrl = slide.videoUrl,
+                    illustrationDescription = slide.title,
+                    title = slide.title,
+                    body = slide.subtitle,
+                )
+            }
+        }
+    }
     OnboardingContent(
         brandName = brandName,
         onFinish = {
             viewModel.complete()
             onFinish()
         },
+        pages = pages,
     )
 }
 
@@ -106,6 +144,7 @@ internal fun OnboardingContent(
     brandName: String,
     onFinish: () -> Unit,
     initialPage: Int = 0,
+    pages: List<OnboardingPage> = defaultPages,
 ) {
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -152,6 +191,7 @@ internal fun OnboardingContent(
                     page = pages[page],
                     count = pages.size,
                     current = page,
+                    isCurrentPage = pagerState.currentPage == page,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -210,6 +250,7 @@ private fun OnboardingPageContent(
     page: OnboardingPage,
     count: Int,
     current: Int,
+    isCurrentPage: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
@@ -221,14 +262,27 @@ private fun OnboardingPageContent(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter = painterResource(page.illustration),
-                contentDescription = page.illustrationDescription,
-                modifier = Modifier
-                    .width(340.dp)
-                    .height(264.dp),
-                contentScale = ContentScale.Fit,
-            )
+            when {
+                page.videoUrl != null -> OnboardingVideo(
+                    url = page.videoUrl,
+                    isCurrentPage = isCurrentPage,
+                    contentDescription = page.illustrationDescription,
+                )
+                page.illustration != null -> Image(
+                    painter = painterResource(page.illustration),
+                    contentDescription = page.illustrationDescription,
+                    modifier = Modifier
+                        .width(340.dp)
+                        .height(264.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                else -> AsyncImage(
+                    model = page.imageUrl,
+                    contentDescription = page.illustrationDescription,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
         Spacer(modifier = Modifier.weight(1f))
         Column(
@@ -249,6 +303,56 @@ private fun OnboardingPageContent(
         }
         Spacer(modifier = Modifier.weight(1f))
     }
+}
+
+/**
+ * Vídeo do slide (CMS): ExoPlayer mudo em loop, sem controles, crop
+ * igual à imagem. Só toca na página atual e em foreground — release
+ * ao sair da composição libera o decoder.
+ */
+@Composable
+private fun OnboardingVideo(
+    url: String,
+    isCurrentPage: Boolean,
+    contentDescription: String?,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val player = remember(url) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            repeatMode = Player.REPEAT_MODE_ONE
+            volume = 0f
+            prepare()
+        }
+    }
+    LaunchedEffect(isCurrentPage) { player.playWhenReady = isCurrentPage }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> if (isCurrentPage) player.play()
+                Lifecycle.Event.ON_PAUSE -> player.pause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            player.release()
+        }
+    }
+    AndroidView(
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                useController = false
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                this.player = player
+            }
+        },
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { this.contentDescription = contentDescription.orEmpty() },
+    )
 }
 
 /** Active dot: 28×6 primary pill; inactive: 8×6 outline-variant pill. */

@@ -40,8 +40,8 @@ android {
         applicationId = "com.sgp.cliente"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 13
+        versionName = "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -112,6 +112,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:network"))
     implementation(project(":core:datastore"))
+    implementation(project(":core:notifications"))
     implementation(project(":domain"))
     implementation(project(":data"))
 
@@ -152,6 +153,8 @@ dependencies {
     if (hasGoogleServices) {
         implementation(platform(libs.firebase.bom))
         implementation(libs.firebase.crashlytics)
+        implementation(libs.firebase.messaging)
+        implementation(project(":core:notifications-fcm"))
     }
 
     // Dev flavor only: offline demo interceptor (okhttp types on classpath).

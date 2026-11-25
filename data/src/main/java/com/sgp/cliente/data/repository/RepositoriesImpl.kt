@@ -25,6 +25,7 @@ import com.sgp.cliente.domain.model.PixCharge
 import com.sgp.cliente.domain.model.SecondCopy
 import com.sgp.cliente.domain.model.SendChannel
 import com.sgp.cliente.domain.model.ServiceStatus
+import com.sgp.cliente.domain.model.SessionState
 import com.sgp.cliente.domain.repository.AuthRepository
 import com.sgp.cliente.domain.repository.ContractRepository
 import com.sgp.cliente.domain.repository.InvoiceRepository
@@ -35,6 +36,7 @@ import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -106,6 +108,38 @@ class AuthRepositoryImpl @Inject constructor(
     private fun List<CentralEntryDto>.preferredCentral(): CentralEntryDto? =
         firstOrNull { it.name.equals("Central do Assinante", ignoreCase = true) }
             ?: firstOrNull { !it.token.isNullOrBlank() }
+
+    override suspend fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+    ): AppResult<Unit> {
+        val session = (sessionRepository.state.first() as? SessionState.LoggedIn)?.session
+            ?: return AppResult.failure(AppError.Unauthorized)
+        return remote.changePassword(
+            customerName = session.customerName,
+            currentPassword = currentPassword,
+            newPassword = newPassword,
+        ).fold(
+            onFailure = { AppResult.failure(it) },
+            onSuccess = { dto ->
+                if (dto.status == STATUS_OK) {
+                    // The API issues a fresh JWT; the stored password must be
+                    // re-ciphered too or the next silent re-login would fail.
+                    dto.jwtToken?.let { sessionRepository.persistAuthToken(it) }
+                    sessionRepository.updatePassword(newPassword)
+                    AppResult.success(Unit)
+                } else {
+                    AppResult.failure(
+                        AppError.Api(dto.message ?: "Não foi possível alterar a senha"),
+                    )
+                }
+            },
+        )
+    }
+
+    private companion object {
+        const val STATUS_OK = 1
+    }
 }
 
 @Singleton

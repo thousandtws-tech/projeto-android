@@ -29,6 +29,12 @@ include(":core:common")
 include(":core:designsystem")
 include(":core:network")
 include(":core:datastore")
+include(":core:notifications")
+// FCM opt-in: o módulo acoplado ao Firebase só entra quando o app tem
+// google-services.json — espelha o `hasGoogleServices` do app/build.gradle.kts.
+if (file("app/google-services.json").exists()) {
+    include(":core:notifications-fcm")
+}
 include(":domain")
 include(":data")
 include(":feature:auth")
